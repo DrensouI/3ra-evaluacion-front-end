@@ -1,0 +1,128 @@
+/* Styles to match the provided login mockup */
+
+#pagina-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fbfc;
+  background-image: radial-gradient(#f2e9e9 1px, transparent 1px);
+  background-size: 24px 24px;
+  padding: 60px 20px;
+}
+
+.hexacall-card {
+  width: min(520px, 92vw);
+  max-width: calc(100% - 48px);
+  background: #fff;
+  border-radius: 18px;
+  padding: 36px 44px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.hexacall-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(180deg,#ff2d2d,#b80b0b);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin: 0 auto 12px auto;
+  box-shadow: 0 8px 18px rgba(184,11,11,0.12);
+}
+
+.hexacall-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: #111827;
+}
+
+.hexacall-subtitle {
+  text-align:center;
+  color: #dc2626;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.hexacall-input {
+  width: 100%;
+  padding: 12px 48px 12px 44px; /* extra right padding to avoid overflow with action button */
+  border-radius: 12px;
+  border: 1px solid #e6eef6;
+  background: #f8fafc;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.hexacall-btn {
+  width: 100%;
+  background: linear-gradient(180deg,#d60b0b,#b80b0b);
+  color: #fff;
+  border: none;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 6px 18px rgba(184,11,11,0.12);
+  cursor: pointer;
+}
+
+.hexacall-footer {
+  margin-top: 22px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 18px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.cred-badge {
+  display:inline-block;
+  background:#f1f5f9;
+  color:#0f172a;
+  font-weight:700;
+  padding:3px 8px;
+  border-radius:6px;
+  margin:2px 0;
+}
+
+/* Small screens tweak */
+@media (max-width:520px){
+  #pagina-login{padding:28px 8px}
+  .hexacall-card{padding:20px 18px;width:92vw}
+  .hexacall-title{font-size:20px}
+  .hexacall-subtitle{font-size:10px}
+  .hexacall-input{padding:10px 44px 10px 40px}
+  .hexacall-btn{padding:12px;font-size:14px}
+  .hexacall-logo{width:48px;height:48px}
+  .hexacall-card{border-radius:14px}
+}

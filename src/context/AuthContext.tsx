@@ -26,11 +26,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const sesionGuardada = localStorage.getItem('obraspro_sesion');
       if (sesionGuardada) {
-        setUsuario(JSON.parse(sesionGuardada));
+        setUsuario(JSON.parse(sesionGuardada) as SesionUsuario);
       }
-    } catch (e) {
-      console.error('Error al cargar sesión desde localStorage', e);
-      localStorage.removeItem('obraspro_sesion');
+    } catch (err: unknown) {
+      console.error('Error al cargar sesión desde localStorage', err);
+      try {
+        localStorage.removeItem('obraspro_sesion');
+      } catch {}
     }
   }, []);
 
@@ -43,13 +45,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const usuariosGuardadosRaw = localStorage.getItem('obraspro_usuarios_registrados');
       if (usuariosGuardadosRaw) {
-        const parsing = JSON.parse(usuariosGuardadosRaw);
+        const parsing: unknown = JSON.parse(usuariosGuardadosRaw);
         if (Array.isArray(parsing)) {
-          listaUsuarios = [...USUARIOS_PREDEFINIDOS, ...parsing];
+          // assume stored items have the same shape as predefined users
+          listaUsuarios = [...USUARIOS_PREDEFINIDOS, ...(parsing as any[])];
         }
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err: unknown) {
+      console.error('Error parseando usuarios guardados', err);
     }
 
     const usuarioEncontrado = listaUsuarios.find(
