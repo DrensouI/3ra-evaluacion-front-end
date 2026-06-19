@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Obra, EstadoObra } from '../types';
 import { Almacenamiento, formatearMoneda } from '../utils';
 import './obras-proyectos.css';
@@ -8,12 +8,15 @@ export default function ObrasYProyectos() {
   const [mostrar, setMostrar] = useState(false);
   const [editando, setEditando] = useState<Obra | null>(null);
   const [form, setForm] = useState({ nombre: '', ubicacion: '', estado: 'en curso' as EstadoObra, presupuesto: '' });
+  const nombreInputRef = useRef<HTMLInputElement>(null);
 
   const guardar = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nombre.trim()) return alert('Nombre requerido');
     
     const presupuesto = form.presupuesto ? parseFloat(form.presupuesto) : 0;
+    if (presupuesto < 0) return alert('Presupuesto no puede ser negativo');
+    
     const actualizado = editando
       ? obras.map(o => o.id === editando.id ? { ...o, ...form, presupuesto } : o)
       : [...obras, { id: `obra-${Date.now()}`, ...form, presupuesto }];
@@ -45,6 +48,14 @@ export default function ObrasYProyectos() {
     setEditando(o);
     setForm({ nombre: o.nombre, ubicacion: o.ubicacion || '', estado: o.estado, presupuesto: o.presupuesto?.toString() || '' });
     setMostrar(true);
+    setTimeout(() => nombreInputRef.current?.focus(), 100);
+  };
+
+  const abrirCrear = () => {
+    setEditando(null);
+    setForm({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' });
+    setMostrar(true);
+    setTimeout(() => nombreInputRef.current?.focus(), 100);
   };
 
   const stats = [
@@ -55,6 +66,10 @@ export default function ObrasYProyectos() {
     { label: 'Presupuesto', val: formatearMoneda(obras.reduce((s, o) => s + (o.presupuesto || 0), 0)) },
   ];
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && mostrar) cerrarModal();
+  };
+
   return (
     <div className="obras-container">
       <div className="obras-header">
@@ -62,12 +77,12 @@ export default function ObrasYProyectos() {
           <h1>Obras y Proyectos</h1>
           <p>Control global de obras de desarrollo, estados o presupuestos.</p>
         </div>
-        <button className="btn-crear" onClick={() => { setEditando(null); setForm({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' }); setMostrar(true); }}>
+        <button className="btn-crear" onClick={abrirCrear} title="Crear nueva obra (Alt+N)">
           + Registrar
         </button>
       </div>
 
-      <div className="stats">
+      <div className="stats" role="region" aria-label="Estadísticas de obras">
         {stats.map((s, i) => (
           <div key={i} className="stat">
             <div className="stat-label">{s.label}</div>
@@ -83,19 +98,24 @@ export default function ObrasYProyectos() {
         ) : (
           <div className="grid">
             {obras.map(o => (
-              <div key={o.id} className="tarjeta">
+              <div key={o.id} className="tarjeta" tabIndex={0} role="article" aria-label={`Obra: ${o.nombre}`}>
                 <h3>{o.nombre}</h3>
                 <span className={`estado ${o.estado.replace(' ', '-')}`}>{o.estado}</span>
-                {o.ubicacion && <p className="ubicacion">📍 {o.ubicacion}</p>}
+                {o.ubicacion && <p className="ubicacion" title={o.ubicacion}>📍 {o.ubicacion}</p>}
                 {o.presupuesto && <p className="presupuesto">💰 {formatearMoneda(o.presupuesto)}</p>}
                 <div className="acciones">
-                  <select value={o.estado} onChange={e => cambiarEstado(o.id, e.target.value as EstadoObra)} className="select">
+                  <select 
+                    value={o.estado} 
+                    onChange={e => cambiarEstado(o.id, e.target.value as EstadoObra)} 
+                    className="select"
+                    aria-label={`Estado de ${o.nombre}`}
+                  >
                     <option value="en curso">En Curso</option>
                     <option value="pausada">Pausada</option>
                     <option value="finalizada">Finalizada</option>
                   </select>
-                  <button className="btn btn-edit" onClick={() => abrirEditar(o)}>✎</button>
-                  <button className="btn btn-del" onClick={() => eliminar(o.id)}>🗑</button>
+                  <button className="btn btn-edit" onClick={() => abrirEditar(o)} title="Editar obra">✎</button>
+                  <button className="btn btn-del" onClick={() => eliminar(o.id)} title="Eliminar obra">🗑</button>
                 </div>
               </div>
             ))}
@@ -104,17 +124,17 @@ export default function ObrasYProyectos() {
       </div>
 
       {mostrar && (
-        <div className="modal" onClick={cerrarModal}>
-          <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal" onClick={cerrarModal} role="presentation">
+          <div className="modal-box" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div className="modal-top">
-              <h2>{editando ? 'Editar' : 'Nueva Obra'}</h2>
-              <button className="btn-x" onClick={cerrarModal}>✕</button>
+              <h2 id="modal-title">{editando ? 'Editar' : 'Nueva Obra'}</h2>
+              <button className="btn-x" onClick={cerrarModal} title="Cerrar (Esc)" aria-label="Cerrar diálogo">✕</button>
             </div>
-            <form onSubmit={guardar}>
-              <label>Nombre *<input type="text" required placeholder="Obra" value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} /></label>
-              <label>Ubicación<input type="text" placeholder="Ubicación" value={form.ubicacion} onChange={e => setForm({...form, ubicacion: e.target.value})} /></label>
-              <label>Estado<select value={form.estado} onChange={e => setForm({...form, estado: e.target.value as EstadoObra})}><option value="en curso">En Curso</option><option value="pausada">Pausada</option><option value="finalizada">Finalizada</option></select></label>
-              <label>Presupuesto<input type="number" placeholder="0" value={form.presupuesto} onChange={e => setForm({...form, presupuesto: e.target.value})} /></label>
+            <form onSubmit={guardar} onKeyDown={handleKeyDown}>
+              <label>Nombre * <input type="text" ref={nombreInputRef} required placeholder="Obra" value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} /></label>
+              <label>Ubicación <input type="text" placeholder="Ubicación" value={form.ubicacion} onChange={e => setForm({...form, ubicacion: e.target.value})} /></label>
+              <label>Estado <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value as EstadoObra})}><option value="en curso">En Curso</option><option value="pausada">Pausada</option><option value="finalizada">Finalizada</option></select></label>
+              <label>Presupuesto <input type="number" min="0" placeholder="0" value={form.presupuesto} onChange={e => setForm({...form, presupuesto: e.target.value})} /></label>
               <div className="form-btns">
                 <button type="button" onClick={cerrarModal}>Cancelar</button>
                 <button type="submit">{editando ? 'Actualizar' : 'Guardar'}</button>
