@@ -2,10 +2,8 @@ import React, { createContext, useContext, useState } from 'react';
 import { SesionUsuario } from '../types';
 
 const CLAVE_SESION = 'hexacall_sesion';
-const CLAVE_USUARIOS = 'hexacall_usuarios_registrados';
 const USUARIOS_PREDEFINIDOS = [
   { correo: 'admin@admin.com', clave: '123456', nombre: 'Luis Alberto Rojas', rol: 'administrador' },
-  { correo: 'soporte@hexacall.cl', clave: '654321', nombre: 'Alonso Ignacio Rojas', rol: 'soporte' }
 ];
 
 interface AuthContextType {
@@ -17,15 +15,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const cargarUsuariosGuardados = () => {
-  try {
-    const datos = JSON.parse(localStorage.getItem(CLAVE_USUARIOS) ?? '[]');
-    return Array.isArray(datos) ? datos : [];
-  } catch {
-    return [];
-  }
-};
 
 const cargarSesion = () => {
   try {
@@ -43,13 +32,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (correoInput: string, claveInput: string): boolean => {
     setErrorLogin(null);
     const correoNorm = correoInput.trim().toLowerCase();
-    const usuarioEncontrado = [...USUARIOS_PREDEFINIDOS, ...cargarUsuariosGuardados()].find(
+    const usuarioEncontrado = USUARIOS_PREDEFINIDOS.find(
       u => u.correo.toLowerCase() === correoNorm && u.clave === claveInput
     );
     if (!usuarioEncontrado) return setErrorLogin('Credenciales inválidas. Correo o contraseña incorrectos.'), false;
     const datosSesion = { correo: usuarioEncontrado.correo, nombre: usuarioEncontrado.nombre, rol: usuarioEncontrado.rol };
     localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesion));
-    setUsuario(datosSesion);
+    setUsuario(datosSesion);  
     return true;
   };
 

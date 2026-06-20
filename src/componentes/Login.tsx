@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import iconoEmpresa from '../assets/icono-empresa.png';
 import './login.css';
 
 // Componente reutilizable para dibujar los íconos sin repetir código SVG
@@ -53,11 +54,7 @@ export default function Login() {
         {/* ENCABEZADO LOGO */}
         <div className="auth-brand">
           <div className="hexacall-logo">
-            <Icon>
-              <path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v4z" />
-              <path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5" />
-              <path d="M4 11V9a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2" />
-            </Icon>
+            <img src={iconoEmpresa} alt="Hexacall Logo" />
           </div>
           <h1 className="hexacall-title">HEXACALL</h1>
           <p className="hexacall-subtitle">Portal de Acceso Interno</p>
@@ -91,8 +88,18 @@ export default function Login() {
                 onChange={manejarCambioInput}
                 className="hexacall-input"
               />
-              <button type="button" className="toggle-password" onClick={() => setMostrarContrasena(prev => !prev)}>
-                {mostrarContrasena ? '🙈' : '👁️'}
+              <button type="button" className="toggle-password" onClick={() => setMostrarContrasena(prev => !prev)} title="Mostrar/ocultar contraseña">
+                {mostrarContrasena ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -102,13 +109,6 @@ export default function Login() {
 
           <button type="submit" className="hexacall-btn">Iniciar Sesión</button>
         </form>
-
-        {/* NOTA DE AYUDA (FOOTER) */}
-        <div className="hexacall-footer">
-          Credenciales válidas de prueba:<br/>
-          <span className="cred-badge">admin@admin.com</span> / 123456<br/>
-          <span className="cred-badge">soporte@hexacall.cl</span> / 654321
-        </div>
 
       </div>
     </div>
