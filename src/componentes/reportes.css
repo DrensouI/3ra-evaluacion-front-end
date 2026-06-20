@@ -195,18 +195,63 @@
   line-height: 1.75;
 }
 
-.btn-eliminar-reporte {
-  align-self: flex-end;
-  background: #f8fafc;
+.reporte-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-eliminar-reporte,
+.btn-editar-reporte,
+.btn-cancelar-edicion {
   border: 1px solid #e2e8f0;
   border-radius: 999px;
   padding: 0.75rem 1rem;
-  color: var(--primary);
+  font-weight: 700;
   cursor: pointer;
+  background: #f8fafc;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-eliminar-reporte:hover,
+.btn-editar-reporte:hover,
+.btn-cancelar-edicion:hover {
+  transform: translateY(-1px);
+}
+
+.btn-editar-reporte {
+  color: #0f766e;
+  border-color: #22c55e;
+}
+
+.btn-editar-reporte:hover {
+  background: #d1fae5;
+}
+
+.btn-cancelar-edicion {
+  color: var(--text);
+  border-color: #94a3b8;
+}
+
+.btn-cancelar-edicion:hover {
+  background: #f1f5f9;
+}
+
+.btn-eliminar-reporte {
+  align-self: flex-end;
+  color: var(--primary);
 }
 
 .btn-eliminar-reporte:hover {
   background: #fde2e2;
+}
+
+.reportes-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 @media (max-width: 980px) {
