@@ -1,29 +1,22 @@
 /*--------------------------------------------- 
-SECCION DEL SIDEBAR
+LOGO DE LA EMPRESA
 -----------------------------------------------*/
 
-
-  /*--------------------------------------------- 
-  LOGO DE LA EMPRESA
-  -----------------------------------------------*/
-
-/* --- ESTILOS PARA EL LOGO PNG --- */
+.sidebar-logo-png {
+  width: 210px;                   
+}
 
 .sidebar-logo-container {
   display: flex;
   align-items: center;
-  gap: 12px;                        
-  margin-bottom: 24px;              
-  padding-bottom: 16px;
-  border-bottom: 1px solid #dc2626; 
-}
-
-.sidebar-logo-png {
-  width: 210px;                      
-  height: auto;
-  object-fit: contain;
+  justify-content: center;
   
-
+  
+  margin: -20px -20px 0px -30px; /*Espacio entre arriba, derecha, abajo y izquierda*/
+  padding: 20px; /* Tamaño que tendra el container */
+  
+  background-color: #ffffff;        
+  border-bottom: 1px solid #8b0000; /* Línea divisoria que tiene entre los dos contenedores */
 }
 
 
@@ -31,7 +24,7 @@ SECCION DEL SIDEBAR
 ESTILO DEL SIDEBAR
 -----------------------------------------------*/
 
-/* Elimina los bordes que se crean en los lados de la barra */
+/* Elimina los bordes que se crean en la pagina completa cuando se inserto el sidebar*/
 html, body {
   margin: 0;
   padding: 0;
@@ -40,32 +33,42 @@ html, body {
 
 .mi-barra-lateral {
   width: 250px;
-  background-color: #910000; 
+  background-color: #ff0000; 
   color: white;
   min-height: 100vh;
   padding: 20px;
   box-sizing: border-box;
-  border-right: 0,9px solid rgba(78, 0, 0, 0.986);
 
   position: relative;  
   z-index: 10;
-  box-shadow: 10px 0 30px rgba(15, 23, 42, 0.27);   
+  border-right: 1px solid rgba(78, 0, 0, 0.986);
+  box-shadow: 3px 0 30px rgba(15, 23, 42, 0.27);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .titulo-menu {
-  margin-bottom: 30px;
+  margin-top: 35px;
+  margin-bottom: 10px;
+  text-align: center;
+  letter-spacing: 0.04em; /*Es simplemente una separación entre las letras*/
 }
 
 .boton-menu {
-  display: block;
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  background-color: #334155;
-  color: white;
-  border: none;
-  border-radius: 6px;
+    margin-top: 20px; 
+    width: 100%;
+    background: #911a1a;
+    color: #ffffff;
+    border: none;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    font-family: inherit; /* Procede a buscar hacia arriba si su contenedor padre tiene un font-family para copiarlo, caso contrario procede a buscar hacia abajo*/
+}
+
+.boton-menu:hover {
+  background-color: #d65151; /* Cambia el color cuando se pone el mouse encima de uno de los botones*/
 }
 
 /*--------------------------------------------- 
