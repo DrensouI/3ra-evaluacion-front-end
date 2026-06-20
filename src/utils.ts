@@ -3,6 +3,7 @@ import { Obra, Personal, Reporte } from './types';
 const CLAVE_OBRAS = 'hexacall_obras';
 const CLAVE_PERSONAL = 'hexacall_personal';
 const CLAVE_REPORTES = 'hexacall_reportes';
+const CLAVE_SESION = 'hexacall_sesion';
 
 const OBRAS_DEFECTO: Obra[] = [
   { id: 'obra-1', nombre: 'Residencial Torre Alameda', estado: 'en curso', ubicacion: 'Av. de las Ciencias 450, Santiago', presupuesto: 12400000 },

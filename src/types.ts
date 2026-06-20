@@ -33,7 +33,6 @@ export interface DashboardProps {
   obras: Obra[];
   personal: Personal[];
   reportes: Reporte[];
-  alNavegarDetalle: (idObra: string) => void;
   alNavegarPestaña: (pestaña: string) => void;
   logout: () => void;
   usuario: SesionUsuario | null;

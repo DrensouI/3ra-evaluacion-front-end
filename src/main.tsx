@@ -22,14 +22,7 @@ function DashboardWrapper() {
   const obras = Almacenamiento.obtenerObras();
   const personal = Almacenamiento.obtenerPersonal();
   const reportes = Almacenamiento.obtenerReportes();
-
-  const alNavegarDetalle = (id: string) => {
-    navigate('/dashboard');
-  };
-  const alNavegarPestaña = (pestaña: string) => {
-    console.log('Navegar a pestaña', pestaña);
-  };
-
+  const alNavegarPestaña = (pestaña: string) => pestaña === 'obras' ? navigate('/obras') : console.log('Navegar a pestaña', pestaña);
   const cerrarSesion = () => {
     logout();
     navigate('/');
@@ -43,7 +36,6 @@ function DashboardWrapper() {
           obras={obras}
           personal={personal}
           reportes={reportes}
-          alNavegarDetalle={alNavegarDetalle}
           alNavegarPestaña={alNavegarPestaña}
           logout={cerrarSesion}
           usuario={usuario}

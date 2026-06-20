@@ -14,14 +14,11 @@ export default function Login() {
   // --- ESTADOS DEL COMPONENTE ---
   // Guarda lo que el usuario escribe en los inputs
   const [credenciales, setCredenciales] = useState({ correo: 'admin@admin.com', clave: '123456' });
-  // Controla si la contraseña se ve como texto o como asteriscos
   const [mostrarContrasena, setMostrarContrasena] = useState(false);
-  // Guarda el texto de error si el usuario se equivoca
   const [mensajeError, setMensajeError] = useState<string | null>(null);
-  
-  // --- HOOKS DE NAVEGACIÓN Y AUTENTICACIÓN ---
   const { login, errorLogin, estaAutenticado } = useAuth();
-  const navigate = useNavigate(); // Permite cambiar de ruta (ej: ir al dashboard)
+  const navigate = useNavigate();
+  const errorTexto = mensajeError || errorLogin;
 
   // Efecto: Si el sistema detecta que el usuario ya está logueado, lo patea directo al dashboard
   useEffect(() => { 
@@ -29,26 +26,20 @@ export default function Login() {
   }, [estaAutenticado, navigate]);
 
   // Función: Actualiza el estado 'credenciales' en tiempo real mientras el usuario escribe
-  const manejarCambioInput = (e: React.ChangeEvent<HTMLInputElement>) => 
-    setCredenciales({ ...credenciales, [e.target.name]: e.target.value });
+  const manejarCambioInput = ({ target: { name, value } }: React.ChangeEvent<HTMLInputElement>) =>
+    setCredenciales(prev => ({ ...prev, [name]: value }));
 
-  // Función: Se ejecuta cuando el usuario hace clic en "Iniciar Sesión"
   const manejarEnvio = (e: React.FormEvent) => {
-    e.preventDefault(); // Evita que la página web parpadee/recargue al enviar el formulario
-    
-    const correoLimpio = credenciales.correo.trim(); // Borra espacios en blanco accidentales
-    
-    // 1. Validaciones básicas antes de consultar a la base de datos/contexto
-    if (!correoLimpio.includes('@') || !correoLimpio.includes('.')) {
+    e.preventDefault();
+    const correoLimpio = credenciales.correo.trim();
+
+    if (!correoLimpio.includes('@') || !correoLimpio.includes('.'))
       return setMensajeError('Formato de correo electrónico inválido.');
-    }
-    if (credenciales.clave.length < 4) {
+
+    if (credenciales.clave.length < 4)
       return setMensajeError('La contraseña debe contener al menos 4 caracteres.');
-    }
-    
-    // 2. Intento de Login: Si es exitoso va al dashboard, sino, muestra el error
-    const accesoExitoso = login(correoLimpio, credenciales.clave);
-    if (accesoExitoso) {
+
+    if (login(correoLimpio, credenciales.clave)) {
       navigate('/dashboard');
     } else {
       setMensajeError('Credenciales incorrectas. Verifique los datos.');
@@ -91,17 +82,23 @@ export default function Login() {
               <span className="input-icon">
                 <Icon><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></Icon>
               </span>
-              <input name="clave" type={mostrarContrasena ? 'text' : 'password'} required placeholder="••••••••" value={credenciales.clave} onChange={manejarCambioInput} className="hexacall-input" />
-              <button type="button" className="toggle-password" onClick={() => setMostrarContrasena(!mostrarContrasena)}>
+              <input
+                name="clave"
+                type={mostrarContrasena ? 'text' : 'password'}
+                required
+                placeholder="••••••••"
+                value={credenciales.clave}
+                onChange={manejarCambioInput}
+                className="hexacall-input"
+              />
+              <button type="button" className="toggle-password" onClick={() => setMostrarContrasena(prev => !prev)}>
                 {mostrarContrasena ? '🙈' : '👁️'}
               </button>
             </div>
           </div>
 
           {/* CAJA DE ERROR: Solo aparece si hay un error guardado en el estado */}
-          {(mensajeError || errorLogin) && (
-            <div className="alert-box">{mensajeError || errorLogin}</div>
-          )}
+          {errorTexto && <div className="alert-box">{errorTexto}</div>}
 
           <button type="submit" className="hexacall-btn">Iniciar Sesión</button>
         </form>

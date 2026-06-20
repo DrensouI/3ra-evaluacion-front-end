@@ -10,26 +10,25 @@ const Icon = ({ children, w = "16" }: { children: React.ReactNode; w?: string })
   </svg>
 );
 
-export default function Dashboard({ obras, personal, reportes, alNavegarDetalle, alNavegarPestaña, logout, usuario }: DashboardProps) {
+export default function Dashboard({ obras, personal, reportes, alNavegarPestaña, logout, usuario }: DashboardProps) {
   
   // --- CÁLCULOS PRINCIPALES DEL DASHBOARD ---
   
   const totalDeObras = obras.length;
-  
-  // Suma el presupuesto de todas las obras usando .reduce()
+  const tieneObras = totalDeObras > 0;
   const presupuestoTotal = obras.reduce((acumulador, obraActual) => acumulador + (obraActual.presupuesto || 0), 0);
-  
-  // Ordena los reportes por fecha (del más nuevo al más viejo) y recorta solo los primeros 3 usando .slice(0, 3)
-  const reportesRecientes = [...reportes]
-    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-    .slice(0, 3);
+  const reportesRecientes = reportes.length
+    ? [...reportes].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).slice(0, 3)
+    : [];
 
-  // Cuenta cuántas obras hay en cada estado filtrando la lista completa
   const resumenEstados = [
-    { etiqueta: 'en curso', color: 'red', cantidad: obras.filter(o => o.estado === 'en curso').length },
-    { etiqueta: 'pausada', color: 'yellow', cantidad: obras.filter(o => o.estado === 'pausada').length },
-    { etiqueta: 'finalizada', color: 'green', cantidad: obras.filter(o => o.estado === 'finalizada').length }
-  ];
+    { etiqueta: 'en curso', color: 'red' },
+    { etiqueta: 'pausada', color: 'yellow' },
+    { etiqueta: 'finalizada', color: 'green' }
+  ].map(estado => ({
+    ...estado,
+    cantidad: obras.filter(o => o.estado === estado.etiqueta).length
+  }));
 
   // Configuración de las 4 tarjetas principales superiores
   const tarjetasInfo = [
@@ -49,7 +48,12 @@ export default function Dashboard({ obras, personal, reportes, alNavegarDetalle,
           <p className="dashboard-subtitle">Indicadores clave de rendimiento, estados de obras y reportes.</p>
         </div>
         <div className="dashboard-header-actions">
-          {usuario && <div><span className="user-chip-name">{usuario.nombre}</span><span className="user-chip-role">{usuario.rol}</span></div>}
+          {usuario ? (
+            <div>
+              <span className="user-chip-name">{usuario.nombre}</span>
+              <span className="user-chip-role">{usuario.rol}</span>
+            </div>
+          ) : null}
           <span className="dashboard-status-pill">Terminal Activa</span>
           <button type="button" className="logout-button" onClick={logout}>Cerrar sesión</button>
         </div>
@@ -86,13 +90,21 @@ export default function Dashboard({ obras, personal, reportes, alNavegarDetalle,
             <div><p className="panel-label">Distribución de Estados</p><h2>Clasificación operacional de obras</h2></div>
           </div>
           
-          {!totalDeObras ? <p style={{ color: '#94a3b8', textAlign: 'center', padding: '32px 0' }}>No hay obras para graficar.</p> : (
+          {tieneObras ? (
             <>
-              {/* Calcula el porcentaje en línea y dibuja el segmento de color */}
               <div className="distribution-bar">
                 {resumenEstados.map(estado => {
                   const porcentaje = Math.round((estado.cantidad / totalDeObras) * 100) || 5;
-                  return <div key={estado.color} className={`bar-segment bar-segment--${estado.color}`} style={{ width: `${porcentaje}%` }} title={`${estado.etiqueta}: ${estado.cantidad} (${porcentaje}%)`}>{porcentaje > 15 ? `${porcentaje}%` : ''}</div>
+                  return (
+                    <div
+                      key={estado.color}
+                      className={`bar-segment bar-segment--${estado.color}`}
+                      style={{ width: `${porcentaje}%` }}
+                      title={`${estado.etiqueta}: ${estado.cantidad} (${porcentaje}%)`}
+                    >
+                      {porcentaje > 15 ? `${porcentaje}%` : ''}
+                    </div>
+                  );
                 })}
               </div>
               <div className="distribution-legend">
@@ -104,6 +116,8 @@ export default function Dashboard({ obras, personal, reportes, alNavegarDetalle,
                 ))}
               </div>
             </>
+          ) : (
+            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '32px 0' }}>No hay obras para graficar.</p>
           )}
         </div>
 
@@ -114,15 +128,19 @@ export default function Dashboard({ obras, personal, reportes, alNavegarDetalle,
             <button type="button" className="link-button" onClick={() => alNavegarPestaña('reportes')}>Ver Todos</button>
           </div>
           
-          {!reportesRecientes.length ? <p style={{ color: '#94a3b8', textAlign: 'center', padding: '24px 0' }}>No hay reportes cargados recientemente.</p> : (
+          {reportesRecientes.length ? (
             <div className="report-list">
               {reportesRecientes.map(reporte => (
-                <div key={reporte.id} className="report-item" onClick={() => alNavegarDetalle(reporte.obraId)}>
+                <div key={reporte.id} className="report-item" onClick={() => alNavegarPestaña('obras')}>
                   <div className="report-item-header">
-                    {/* Busca el nombre de la obra comparando el ID del reporte con el ID de la obra */}
                     <strong>{obras.find(obra => obra.id === reporte.obraId)?.nombre || 'Obra Desvinculada'}</strong>
                     <span className="report-date">
-                      <Icon w="14"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></Icon> 
+                      <Icon w="14">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </Icon>
                       {reporte.fecha}
                     </span>
                   </div>
@@ -130,6 +148,8 @@ export default function Dashboard({ obras, personal, reportes, alNavegarDetalle,
                 </div>
               ))}
             </div>
+          ) : (
+            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '24px 0' }}>No hay reportes cargados recientemente.</p>
           )}
         </div>
       </section>
@@ -152,7 +172,7 @@ export default function Dashboard({ obras, personal, reportes, alNavegarDetalle,
                     <td><span className={`badge badge--${obra.estado.replace(' ', '')}`}>{obra.estado}</span></td>
                     <td>{obra.ubicacion || 'No informada'}</td>
                     <td>{obra.presupuesto ? formatearMoneda(obra.presupuesto) : 'S/P'}</td>
-                    <td><button type="button" className="small-button" onClick={() => alNavegarDetalle(obra.id)}>Inspeccionar</button></td>
+                    <td><button type="button" className="small-button" onClick={() => alNavegarPestaña('obras')}>Ver obra</button></td>
                   </tr>
                 ))}
               </tbody>

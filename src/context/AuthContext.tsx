@@ -1,8 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { SesionUsuario } from '../types';
 
 const CLAVE_SESION = 'hexacall_sesion';
 const CLAVE_USUARIOS = 'hexacall_usuarios_registrados';
+const USUARIOS_PREDEFINIDOS = [
+  { correo: 'admin@admin.com', clave: '123456', nombre: 'Luis Alberto Rojas', rol: 'administrador' },
+  { correo: 'soporte@hexacall.cl', clave: '654321', nombre: 'Alonso Ignacio Rojas', rol: 'soporte' }
+];
 
 interface AuthContextType {
   usuario: SesionUsuario | null;
@@ -14,80 +18,45 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Credenciales registradas por defecto en el sistema
-const USUARIOS_PREDEFINIDOS = [
-  { correo: 'admin@admin.com', clave: '123456', nombre: 'Luis Alberto Rojas', rol: 'administrador' },
-  { correo: 'soporte@hexacall.cl', clave: '654321', nombre: 'Alonso Ignacio Rojas', rol: 'soporte' }
-];
+const cargarUsuariosGuardados = () => {
+  try {
+    const datos = JSON.parse(localStorage.getItem(CLAVE_USUARIOS) ?? '[]');
+    return Array.isArray(datos) ? datos : [];
+  } catch {
+    return [];
+  }
+};
+
+const cargarSesion = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_SESION) ?? 'null');
+  } catch {
+    localStorage.removeItem(CLAVE_SESION);
+    return null;
+  }
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [usuario, setUsuario] = useState<SesionUsuario | null>(null);
+  const [usuario, setUsuario] = useState<SesionUsuario | null>(cargarSesion);
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
-
-  // Carga inicial del estado desde localStorage
-  useEffect(() => {
-    try {
-      const sesionGuardada = localStorage.getItem(CLAVE_SESION);
-      if (sesionGuardada) {
-        setUsuario(JSON.parse(sesionGuardada) as SesionUsuario);
-      }
-    } catch (err: unknown) {
-      console.error('Error al cargar sesión desde localStorage', err);
-      try {
-        localStorage.removeItem(CLAVE_SESION);
-      } catch {}
-    }
-  }, []);
 
   const login = (correoInput: string, claveInput: string): boolean => {
     setErrorLogin(null);
     const correoNorm = correoInput.trim().toLowerCase();
-
-    // Buscar en usuarios guardados en localStorage o predefinidos
-    let listaUsuarios = USUARIOS_PREDEFINIDOS;
-    try {
-      const usuariosGuardadosRaw = localStorage.getItem(CLAVE_USUARIOS);
-      if (usuariosGuardadosRaw) {
-        const parsing: unknown = JSON.parse(usuariosGuardadosRaw);
-        if (Array.isArray(parsing)) {
-          // assume stored items have the same shape as predefined users
-          listaUsuarios = [...USUARIOS_PREDEFINIDOS, ...(parsing as any[])];
-        }
-      }
-    } catch (err: unknown) {
-      console.error('Error parseando usuarios guardados', err);
-    }
-
-    const usuarioEncontrado = listaUsuarios.find(
+    const usuarioEncontrado = [...USUARIOS_PREDEFINIDOS, ...cargarUsuariosGuardados()].find(
       u => u.correo.toLowerCase() === correoNorm && u.clave === claveInput
     );
-
-    if (usuarioEncontrado) {
-      const datosSesion: SesionUsuario = {
-        correo: usuarioEncontrado.correo,
-        nombre: usuarioEncontrado.nombre,
-        rol: usuarioEncontrado.rol
-      };
-
-      localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesion));
-      setUsuario(datosSesion);
-      return true;
-    } else {
-      setErrorLogin('Credenciales inválidas. Correo o contraseña incorrectos.');
-      return false;
-    }
+    if (!usuarioEncontrado) return setErrorLogin('Credenciales inválidas. Correo o contraseña incorrectos.'), false;
+    const datosSesion = { correo: usuarioEncontrado.correo, nombre: usuarioEncontrado.nombre, rol: usuarioEncontrado.rol };
+    localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesion));
+    setUsuario(datosSesion);
+    return true;
   };
 
-  const logout = () => {
-    localStorage.removeItem(CLAVE_SESION);
-    setUsuario(null);
-    setErrorLogin(null);
-  };
-
-  const estaAutenticado = usuario !== null;
+  const logout = () => (localStorage.removeItem(CLAVE_SESION), setUsuario(null), setErrorLogin(null));
 
   return (
-    <AuthContext.Provider value={{ usuario, estaAutenticado, login, logout, errorLogin }}>
+    <AuthContext.Provider value={{ usuario, estaAutenticado: Boolean(usuario), login, logout, errorLogin }}>
       {children}
     </AuthContext.Provider>
   );
@@ -95,8 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
-  }
+  if (!context) throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
   return context;
 }
