@@ -8,6 +8,15 @@
   --border: #e2e8f0;
 }
 
+/* --- SOLUCIÓN DE DESBORDAMIENTO --- */
+.reportes-page,
+.reportes-page *,
+.reportes-page *::before,
+.reportes-page *::after {
+  box-sizing: border-box;
+}
+/* ---------------------------------- */
+
 .reportes-page {
   min-height: 100vh;
   padding: 32px;

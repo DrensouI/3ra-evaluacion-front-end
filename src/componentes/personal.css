@@ -1,6 +1,3 @@
-
-
-
 :root {
   --bg: #f4f6f8;
   --bg-panel: #ffffff;
@@ -10,6 +7,15 @@
   --accent: #f97316;
   --border: #e2e8f0;
 }
+
+/* --- SOLUCIÓN DE DESBORDAMIENTO --- */
+.empleados-page,
+.empleados-page *,
+.empleados-page *::before,
+.empleados-page *::after {
+  box-sizing: border-box;
+}
+/* ---------------------------------- */
 
 .empleados-page {
   min-height: 100vh;
