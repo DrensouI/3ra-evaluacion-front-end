@@ -104,6 +104,17 @@ form input:focus-visible, form select:focus-visible { border-color: var(--b); ba
   margin-bottom: 12px;
 }
 
+/* Small tweaks when using dashboard layout */
+.search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.report-item p { margin: 6px 0; color: #475569; }
+
 @media (max-width: 768px) {
   .obras-container { padding: 1rem; }
   .obras-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
@@ -111,4 +122,18 @@ form input:focus-visible, form select:focus-visible { border-color: var(--b); ba
   .stats { grid-template-columns: repeat(2, 1fr); }
   .grid { grid-template-columns: 1fr; }
   .acciones { flex-direction: column; }
+}
+
+/* Two-column layout to mirror empleados/reportes */
+.obras-paneles { display: grid; grid-template-columns: 360px 1fr; gap: 1.25rem; margin-top: 1.25rem; }
+.obras-creacion { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.04); }
+.obras-creacion-top h2 { margin: 0 0 0.75rem; }
+.obras-form label { display:block; margin-top: 0.75rem; font-weight:600; color:var(--p); }
+.obras-form input, .obras-form select { width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:8px; margin-top:0.5rem; }
+.obras-listado { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.04); }
+.obras-listado-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:1rem; }
+.obras-listado-header h2 { margin:0; }
+
+@media (max-width: 900px) {
+  .obras-paneles { grid-template-columns: 1fr; }
 }

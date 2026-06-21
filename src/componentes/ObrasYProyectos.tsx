@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Obra, EstadoObra } from '../types';
 import { formatearMoneda } from '../utils';
+import './dashboard.css';
 import './obras-proyectos.css';
 
 type ObrasYProyectosProps = {
@@ -9,205 +10,158 @@ type ObrasYProyectosProps = {
 };
 
 export default function ObrasYProyectos({ obras, guardarObras }: ObrasYProyectosProps) {
-  const [mostrar, setMostrar] = useState(false);
-  const [editando, setEditando] = useState<Obra | null>(null);
-  const [form, setForm] = useState({ nombre: '', ubicacion: '', estado: 'en curso' as EstadoObra, presupuesto: '' });
+  /**
+   * Componente `Obras` — Gestión de obras y proyectos.
+   * - Mantiene creación/edición/eliminación de obras
+   * - Muestra estadísticas y listado filtrable en tiempo real
+   * - Diseñado para ser claro y consistente con `Dashboard`/`Login`
+   */
+  
+  const [obraEditando, setObraEditando] = useState<Obra | null>(null);
+  const [formulario, setFormulario] = useState({ nombre: '', ubicacion: '', estado: 'en curso' as EstadoObra, presupuesto: '' });
   const [mensajeError, setMensajeError] = useState<string | null>(null);
-  const nombreInputRef = useRef<HTMLInputElement>(null);
+  const [terminoBusqueda, setTerminoBusqueda] = useState('');
 
-  const guardar = (e: React.FormEvent) => {
+  const manejarEnvioObra = (e: React.FormEvent) => {
     e.preventDefault();
     setMensajeError(null);
 
-    if (!form.nombre.trim())
-      return setMensajeError('El nombre de la obra es obligatorio.');
-    
-    if (!form.ubicacion.trim())
-      return setMensajeError('La ubicación de la obra es obligatoria.');
-    
-    const presupuesto = form.presupuesto ? parseFloat(form.presupuesto) : 0;
-    if (presupuesto < 0)
-      return setMensajeError('El presupuesto no puede ser negativo.');
-    
-    const actualizado = editando
-      ? obras.map(o => o.id === editando.id ? { ...o, ...form, presupuesto } : o)
-      : [...obras, { id: `obra-${Date.now()}`, ...form, presupuesto }];
-    
+    if (!formulario.nombre.trim()) return setMensajeError('El nombre de la obra es obligatorio.');
+    if (!formulario.ubicacion.trim()) return setMensajeError('La ubicación de la obra es obligatoria.');
+
+    const presupuesto = formulario.presupuesto ? parseFloat(formulario.presupuesto) : 0;
+    if (presupuesto < 0) return setMensajeError('El presupuesto no puede ser negativo.');
+
+    const obrasActualizadas = obraEditando
+      ? obras.map(o => o.id === obraEditando.id ? { ...o, ...formulario, presupuesto } : o)
+      : [...obras, { id: `obra-${Date.now()}`, ...formulario, presupuesto }];
+
+    guardarObras(obrasActualizadas);
+
+    setFormulario({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' });
+    setMensajeError(null);
+    // limpiamos estado de edición y formulario
+    setObraEditando(null);
+  };
+
+  // limpia estado de edición
+  const cerrarEdicion = () => setObraEditando(null);
+
+  const manejarEliminar = (id: string) => {
+    if (!confirm('¿Eliminar?')) return;
+    const actualizado = obras.filter(o => o.id !== id);
     guardarObras(actualizado);
-    setForm({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' });
-    setMensajeError(null);
-    setMostrar(false);
-    setEditando(null);
   };
 
-  const cerrarModal = () => { 
-    setMostrar(false); 
-    setEditando(null); 
-    setMensajeError(null);
-  };
-
-  const eliminar = (id: string) => {
-    if (confirm('¿Eliminar?')) {
-      const actualizado = obras.filter(o => o.id !== id);
-      guardarObras(actualizado);
-    }
-  };
-
-  const cambiarEstado = (id: string, estado: EstadoObra) => {
+  const manejarCambioEstado = (id: string, estado: EstadoObra) => {
     const actualizado = obras.map(o => o.id === id ? { ...o, estado } : o);
     guardarObras(actualizado);
   };
 
-  const abrirEditar = (o: Obra) => {
-    setEditando(o);
-    setForm({ nombre: o.nombre, ubicacion: o.ubicacion || '', estado: o.estado, presupuesto: o.presupuesto?.toString() || '' });
-    setMostrar(true);
-    setTimeout(() => nombreInputRef.current?.focus(), 100);
+  const abrirEditar = (obra: Obra) => {
+    setObraEditando(obra);
+    setFormulario({ nombre: obra.nombre, ubicacion: obra.ubicacion || '', estado: obra.estado, presupuesto: obra.presupuesto?.toString() || '' });
+    // foco no necesario en esta versión inline
   };
 
   const abrirCrear = () => {
-    setEditando(null);
-    setForm({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' });
-    setMostrar(true);
-    setTimeout(() => nombreInputRef.current?.focus(), 100);
+    setObraEditando(null);
+    setFormulario({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' });
+    // foco no necesario en esta versión inline
   };
 
   const stats = [
-    { label: 'Total', val: obras.length },
-    { label: 'En Curso', val: obras.filter(o => o.estado === 'en curso').length, cls: 'stat-curso' },
-    { label: 'Pausadas', val: obras.filter(o => o.estado === 'pausada').length, cls: 'stat-pausada' },
-    { label: 'Finalizadas', val: obras.filter(o => o.estado === 'finalizada').length, cls: 'stat-finalizada' },
-    { label: 'Presupuesto', val: formatearMoneda(obras.reduce((s, o) => s + (o.presupuesto || 0), 0)) },
+    { label: 'Total', value: obras.length },
+    { label: 'En Curso', value: obras.filter(o => o.estado === 'en curso').length, cls: 'stat-curso' },
+    { label: 'Pausadas', value: obras.filter(o => o.estado === 'pausada').length, cls: 'stat-pausada' },
+    { label: 'Finalizadas', value: obras.filter(o => o.estado === 'finalizada').length, cls: 'stat-finalizada' },
+    { label: 'Presupuesto', value: formatearMoneda(obras.reduce((s, o) => s + (o.presupuesto || 0), 0)) },
   ];
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && mostrar) cerrarModal();
-  };
+  const obrasFiltradas = terminoBusqueda
+    ? obras.filter(o => o.nombre.toLowerCase().includes(terminoBusqueda.toLowerCase()) || (o.ubicacion || '').toLowerCase().includes(terminoBusqueda.toLowerCase()))
+    : obras;
+
+  // teclado no requerido para formulario inline
 
   return (
-    <main className="obras-container" aria-labelledby="obras-title">
-      <div className="obras-header">
+    <main className="dashboard-page" aria-labelledby="obras-title">
+      <header className="obras-header">
         <div>
-          <h1 id="obras-title">Obras y Proyectos</h1>
-          <p id="obras-summary">Control global de obras de desarrollo, estados o presupuestos.</p>
+          <h1 id="obras-title">Obras</h1>
+          <p id="obras-summary">Control global de obras de desarrollo, estados y presupuestos.</p>
         </div>
-        <button
-          className="btn-crear"
-          onClick={abrirCrear}
-          title="Crear nueva obra (Alt+N)"
-          aria-label="Crear nueva obra"
-          aria-expanded={mostrar}
-          aria-controls="obra-form"
-          type="button"
-        >
-          + Registrar
-        </button>
-      </div>
+      </header>
 
-      <div className="stats" role="status" aria-label="Estadísticas de obras" aria-live="polite">
-        {stats.map((s, i) => (
-          <div key={i} className="stat">
-            <div className="stat-label">{s.label}</div>
-            <div className={`stat-val ${s.cls || ''}`}>{s.val}</div>
+      <section className="obras-paneles">
+        <div className="obras-creacion">
+          <div className="obras-creacion-top">
+            <h2>{obraEditando ? 'Editar obra' : 'Nuevo registro'}</h2>
           </div>
-        ))}
-      </div>
 
-      <section className="lista" aria-labelledby="lista-obras-title">
-        <h2 id="lista-obras-title">Listado de Obras</h2>
-        {obras.length === 0 ? (
-          <p className="vacio">No hay obras registradas.</p>
-        ) : (
-          <div className="grid">
-            {obras.map(o => (
-              <article key={o.id} className="tarjeta" tabIndex={0} aria-labelledby={`obra-${o.id}-titulo`}>
-                <h3 id={`obra-${o.id}-titulo`}>{o.nombre}</h3>
-                <span className={`estado ${o.estado.replace(' ', '-')}`}>{o.estado}</span>
-                {o.ubicacion && <p className="ubicacion" title={o.ubicacion}>📍 {o.ubicacion}</p>}
-                {o.presupuesto && <p className="presupuesto">💰 {formatearMoneda(o.presupuesto)}</p>}
-                <div className="acciones">
-                  <select 
-                    value={o.estado} 
-                    onChange={e => cambiarEstado(o.id, e.target.value as EstadoObra)} 
-                    className="select"
-                    aria-label={`Cambiar estado de ${o.nombre}`}
-                  >
-                    <option value="en curso">En Curso</option>
-                    <option value="pausada">Pausada</option>
-                    <option value="finalizada">Finalizada</option>
-                  </select>
-                  <button className="btn btn-edit" onClick={() => abrirEditar(o)} title="Editar obra" aria-label={`Editar obra ${o.nombre}`}>✎</button>
-                  <button className="btn btn-del" onClick={() => eliminar(o.id)} title="Eliminar obra" aria-label={`Eliminar obra ${o.nombre}`}>🗑</button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+          <form onSubmit={manejarEnvioObra} className="obras-form">
+            <label htmlFor="obra-nombre">Nombre</label>
+            <input id="obra-nombre" value={formulario.nombre} onChange={e => setFormulario(prev => ({ ...prev, nombre: e.target.value }))} placeholder="Nombre de la obra" />
 
-      {mostrar && (
-        <div className="modal" onClick={cerrarModal} role="presentation">
-          <div className="modal-box" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-description">
-            <div className="modal-top">
-              <h2 id="modal-title">{editando ? 'Editar' : 'Nueva Obra'}</h2>
-              <button className="btn-x" onClick={cerrarModal} type="button" title="Cerrar (Esc)" aria-label="Cerrar diálogo">✕</button>
+            <label htmlFor="obra-ubicacion">Ubicación</label>
+            <input id="obra-ubicacion" value={formulario.ubicacion} onChange={e => setFormulario(prev => ({ ...prev, ubicacion: e.target.value }))} placeholder="Ciudad, barrio o dirección" />
+
+            <label htmlFor="obra-estado">Estado</label>
+            <select id="obra-estado" value={formulario.estado} onChange={e => setFormulario(prev => ({ ...prev, estado: e.target.value as EstadoObra }))}>
+              <option value="en curso">En Curso</option>
+              <option value="pausada">Pausada</option>
+              <option value="finalizada">Finalizada</option>
+            </select>
+
+            <label htmlFor="obra-presupuesto">Presupuesto</label>
+            <input id="obra-presupuesto" type="number" min="0" value={formulario.presupuesto} onChange={e => setFormulario(prev => ({ ...prev, presupuesto: e.target.value }))} placeholder="0" />
+
+            {mensajeError && <div className="alert-box">{mensajeError}</div>}
+
+            <div className="form-btns">
+              <button type="submit" className="btn-crear" aria-label={obraEditando ? 'Actualizar obra' : 'Guardar obra'}>{obraEditando ? 'Guardar cambios' : 'Registrar obra'}</button>
+              {obraEditando && <button type="button" className="btn-cancelar-edicion" onClick={() => { setObraEditando(null); setFormulario({ nombre: '', ubicacion: '', estado: 'en curso', presupuesto: '' }); }}>Cancelar edición</button>}
             </div>
-            <p id="modal-description" className="sr-only">Formulario para crear o editar una obra.</p>
-            <form id="obra-form" onSubmit={guardar} onKeyDown={handleKeyDown} aria-label="Formulario de obra">
-              <label htmlFor="obra-nombre">Nombre *</label>
-              <input
-                id="obra-nombre"
-                type="text"
-                ref={nombreInputRef}
-                required
-                aria-required="true"
-                placeholder="Obra"
-                value={form.nombre}
-                onChange={e => setForm({...form, nombre: e.target.value})}
-              />
-
-              <label htmlFor="obra-ubicacion">Ubicación *</label>
-              <input
-                id="obra-ubicacion"
-                type="text"
-                required
-                aria-required="true"
-                placeholder="Ubicación"
-                value={form.ubicacion}
-                onChange={e => setForm({...form, ubicacion: e.target.value})}
-              />
-
-              <label htmlFor="obra-estado">Estado</label>
-              <select
-                id="obra-estado"
-                value={form.estado}
-                onChange={e => setForm({...form, estado: e.target.value as EstadoObra})}
-              >
-                <option value="en curso">En Curso</option>
-                <option value="pausada">Pausada</option>
-                <option value="finalizada">Finalizada</option>
-              </select>
-
-              <label htmlFor="obra-presupuesto">Presupuesto</label>
-              <input
-                id="obra-presupuesto"
-                type="number"
-                min="0"
-                placeholder="0"
-                value={form.presupuesto}
-                onChange={e => setForm({...form, presupuesto: e.target.value})}
-              />
-
-              {mensajeError && <div className="alert-box">{mensajeError}</div>}
-
-              <div className="form-btns">
-                <button type="button" onClick={cerrarModal} aria-label="Cancelar">Cancelar</button>
-                <button type="submit" aria-label={editando ? 'Actualizar obra' : 'Guardar obra'}>{editando ? 'Actualizar' : 'Guardar'}</button>
-              </div>
-            </form>
-          </div>
+          </form>
         </div>
-      )}
+
+        <div className="obras-listado">
+          <div className="obras-listado-header">
+            <div>
+              <h2>Listado de Obras</h2>
+              <span>{obras.length} {obras.length === 1 ? 'obra' : 'obras'}</span>
+            </div>
+            <div style={{ width: 320 }}>
+              <input className="search-input" placeholder="Buscar obras por nombre o ubicación..." value={terminoBusqueda} onChange={e => setTerminoBusqueda(e.target.value)} aria-label="Buscar obras" />
+            </div>
+          </div>
+
+          {obrasFiltradas.length === 0 ? (
+            <p className="vacio">No se encontraron obras.</p>
+          ) : (
+            <div className="grid">
+              {obrasFiltradas.map(o => (
+                <article key={o.id} className="tarjeta" tabIndex={0} aria-labelledby={`obra-${o.id}-titulo`}>
+                  <h3 id={`obra-${o.id}-titulo`}>{o.nombre}</h3>
+                  <span className={`estado ${o.estado.replace(' ', '-')}`}>{o.estado}</span>
+                  {o.ubicacion && <p className="ubicacion" title={o.ubicacion}>📍 {o.ubicacion}</p>}
+                  {o.presupuesto && <p className="presupuesto">💰 {formatearMoneda(o.presupuesto)}</p>}
+                  <div className="acciones">
+                    <select value={o.estado} onChange={e => manejarCambioEstado(o.id, e.target.value as EstadoObra)} className="select" aria-label={`Cambiar estado de ${o.nombre}`}>
+                      <option value="en curso">En Curso</option>
+                      <option value="pausada">Pausada</option>
+                      <option value="finalizada">Finalizada</option>
+                    </select>
+                    <button className="btn-edit" onClick={() => abrirEditar(o)} title="Editar obra" aria-label={`Editar obra ${o.nombre}`}>Editar</button>
+                    <button className="btn-del" onClick={() => manejarEliminar(o.id)} title="Eliminar obra" aria-label={`Eliminar obra ${o.nombre}`}>Eliminar</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+      
     </main>
   );
 }
