@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import { Obra, EstadoObra } from '../types';
 import { formatearMoneda } from '../utils';
 import './obras-proyectos.css';
@@ -6,9 +6,10 @@ import './obras-proyectos.css';
 type ObrasYProyectosProps = {
   obras: Obra[];
   guardarObras: (obras: Obra[]) => void;
+  selectedId?: string | undefined;
 };
 
-export default function ObrasYProyectos({ obras, guardarObras }: ObrasYProyectosProps) {
+export default function ObrasYProyectos({ obras, guardarObras, selectedId }: ObrasYProyectosProps) {
   const [obraEnEdicion, setObraEnEdicion] = useState<Obra | null>(null);
   const [formulario, setFormulario] = useState({ nombre: '', ubicacion: '', estado: 'en curso' as EstadoObra, presupuesto: '' });
   const [alertaError, setAlertaError] = useState<string | null>(null);
@@ -62,6 +63,12 @@ export default function ObrasYProyectos({ obras, guardarObras }: ObrasYProyectos
     setAlertaError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const encontrada = obras.find(o => o.id === selectedId);
+    if (encontrada) iniciarEdicion(encontrada);
+  }, [selectedId, obras]);
 
   const obrasFiltradas = terminoBusqueda
     ? obras.filter(o => o.nombre.toLowerCase().includes(terminoBusqueda.toLowerCase()) || (o.ubicacion || '').toLowerCase().includes(terminoBusqueda.toLowerCase()))

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './componentes/Login';
 import Dashboard from './componentes/Dashboard';
@@ -77,6 +77,7 @@ function App() {
 
   const ObrasWrapper = () => {
     const { logout } = useAuth();
+    const { id } = useParams();
     const cerrarSesion = () => {
       logout();
       window.location.href = '/';
@@ -86,7 +87,7 @@ function App() {
       <div style={{ display: 'flex' }}>
         <SideBar />
         <div style={{ flex: 1 }}>
-          <ObrasYProyectos obras={obras} guardarObras={guardarObras} />
+          <ObrasYProyectos obras={obras} guardarObras={guardarObras} selectedId={id} />
         </div>
       </div>
     );
@@ -124,6 +125,14 @@ function App() {
         />
         <Route
           path="/obras"
+          element={
+            <ProtectedRoute>
+              <ObrasWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/obras/:id"
           element={
             <ProtectedRoute>
               <ObrasWrapper />
