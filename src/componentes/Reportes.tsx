@@ -1,6 +1,5 @@
 import React, { useState, FormEvent } from 'react';
 import { Obra, Reporte, ReportesProps } from '../types';
-import { crearReporte, actualizarReporte, eliminarReporteById } from '../services/api';
 import './reportes.css';
 
 // Fecha actual en formato YYYY-MM-DD (usada para validación de fecha)
@@ -107,15 +106,9 @@ export default function Reportes({ obras, reportes, guardarReportes, crearReport
     try {
       if (reporteEditandoId) {
         // Actualizar reporte existente
-        await actualizarReporte(datosReporte.id, {
-          obraId: datosReporte.obraId,
-          fecha: datosReporte.fecha,
-          descripcion: datosReporte.descripcion,
-        });
         actualizarReporteCtx && await actualizarReporteCtx(datosReporte.id, datosReporte);
       } else {
         // Crear nuevo reporte
-        await crearReporte(datosReporte);
         crearReporteCtx && await crearReporteCtx(datosReporte);
       }
       setAlerta({ tipo: 'success', texto: reporteEditandoId ? 'Informe actualizado correctamente.' : 'Informe creado correctamente.' });
@@ -134,7 +127,6 @@ export default function Reportes({ obras, reportes, guardarReportes, crearReport
     if (!confirm('¿Eliminar este informe?')) return;
     setCargando(true);
     try {
-      await eliminarReporteById(id);
       eliminarReporteCtx && await eliminarReporteCtx(id);
       setAlerta({ tipo: 'success', texto: 'Informe eliminado correctamente.' });
       if (reporteEditandoId === id) limpiarFormulario();
