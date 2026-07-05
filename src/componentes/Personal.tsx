@@ -24,12 +24,57 @@ export default function Empleados({ obras, personal, guardarPersonal }: Empleado
     setPersonalEditandoId(null);
   };
 
+  // Valida que no haya personal duplicado en la misma obra
+  const validarPersonalDuplicado = (nombre: string, obraId: string): boolean => {
+    return personal.some(p => 
+      p.nombre.toLowerCase() === nombre.toLowerCase() && 
+      p.obraId === obraId &&
+      p.id !== personalEditandoId
+    );
+  };
+
+  // Valida que no haya personal duplicado globalmente (en ninguna obra)
+  const validarPersonalDuplicadoGlobal = (nombre: string): boolean => {
+    return personal.some(p => 
+      p.nombre.toLowerCase() === nombre.toLowerCase() &&
+      p.id !== personalEditandoId
+    );
+  };
+
   // Valida y Guarda o lo actualiza en el LocalStorage
   const manejarEnvio = (e: FormEvent) => {
     e.preventDefault();
 
-    if (!formulario.nombre.trim()) {
+    const nombreTrimmed = formulario.nombre.trim();
+
+    if (!nombreTrimmed) {
       alert('El nombre completo es requerido.');
+      return;
+    }
+
+    if (nombreTrimmed.length < 5) {
+      alert('El nombre debe tener al menos 5 caracteres.');
+      return;
+    }
+
+    if (nombreTrimmed.length > 100) {
+      alert('El nombre no puede exceder 100 caracteres.');
+      return;
+    }
+
+    const palabras = nombreTrimmed.split(/\s+/).filter(p => p.length > 0);
+    if (palabras.length < 2) {
+      alert('Ingresa nombre completo (nombre y apellido).');
+      return;
+    }
+
+    if (validarPersonalDuplicadoGlobal(nombreTrimmed)) {
+      alert('Ya existe un trabajador con este nombre en el sistema.');
+      return;
+    }
+
+    if (validarPersonalDuplicado(nombreTrimmed, formulario.obraId)) {
+      alert('Ya existe un trabajador con este nombre asignado a esta obra.');
       return;
     }
       
@@ -38,7 +83,7 @@ export default function Empleados({ obras, personal, guardarPersonal }: Empleado
       id: personalEditandoId || `personal-${Date.now()}`,
       /* Cualquier intento de inyeccion que intente hacer el usuario, el sistema lo 'neutraliza' al revisarlo
       si hay algún tipo de caracter peligroso que pueda llegar a ser afectado*/
-      nombre: sanitizarTexto(formulario.nombre.trim()), 
+      nombre: sanitizarTexto(nombreTrimmed), 
       cargo: formulario.cargo,
       obraId: formulario.obraId,
     };

@@ -17,19 +17,47 @@ export default function ObrasYProyectos({ obras, guardarObras, selectedId, crear
     setAlertaError(null);
   };
 
+  // Valida que no haya obras duplicadas
+  const validarObraDuplicada = (nombre: string): boolean => {
+    return obras.some(o => 
+      o.nombre.toLowerCase() === nombre.toLowerCase() &&
+      o.id !== obraEnEdicion?.id
+    );
+  };
+
+  // Valida formato de ubicación (no solo números)
+  const validarUbicacion = (ubicacion: string): boolean => {
+    return /\d/.test(ubicacion) && !/[a-zA-Z]/.test(ubicacion);
+  };
+
   const manejarEnvioObra = async (e: FormEvent) => {
     e.preventDefault();
     setAlertaError(null);
 
-    if (!formulario.nombre.trim()) return setAlertaError('El nombre de la obra es obligatorio.');
-    if (!formulario.ubicacion.trim()) return setAlertaError('La ubicación es obligatoria.');
+    const nombreTrimmed = formulario.nombre.trim();
+    const ubicacionTrimmed = formulario.ubicacion.trim();
+
+    if (!nombreTrimmed) return setAlertaError('El nombre de la obra es obligatorio.');
+    if (nombreTrimmed.length < 5) return setAlertaError('El nombre debe tener al menos 5 caracteres.');
+    if (nombreTrimmed.length > 100) return setAlertaError('El nombre no puede exceder 100 caracteres.');
+    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-]+$/.test(nombreTrimmed)) return setAlertaError('El nombre solo puede contener letras, números, espacios y guiones.');
+    
+    if (!ubicacionTrimmed) return setAlertaError('La ubicación es obligatoria.');
+    if (ubicacionTrimmed.length < 5) return setAlertaError('La ubicación debe tener al menos 5 caracteres.');
+    if (validarUbicacion(ubicacionTrimmed)) return setAlertaError('La ubicación no puede contener solo números.');
+    
+    if (validarObraDuplicada(nombreTrimmed)) return setAlertaError('Ya existe una obra con este nombre.');
 
     const presupuestoNumerico = formulario.presupuesto ? parseFloat(formulario.presupuesto) : 0;
     if (presupuestoNumerico < 0) return setAlertaError('El presupuesto no puede ser negativo.');
+    if (presupuestoNumerico > 0 && presupuestoNumerico < 50000) return setAlertaError('El presupuesto mínimo es $50,000.');
+    if (presupuestoNumerico > 1000000000) return setAlertaError('El presupuesto no puede exceder $1,000,000,000.');
 
     const datosObra: Obra = {
       id: obraEnEdicion ? obraEnEdicion.id : `obra-${Date.now()}`,
-      ...formulario,
+      nombre: nombreTrimmed,
+      ubicacion: ubicacionTrimmed,
+      estado: formulario.estado,
       presupuesto: presupuestoNumerico
     };
 

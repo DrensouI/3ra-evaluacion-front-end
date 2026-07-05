@@ -34,23 +34,74 @@ export default function Reportes({ obras, reportes, guardarReportes, crearReport
     setAlerta(null);
   };
 
+  // Valida que no haya reportes duplicados
+  const validarReporteDuplicado = (obraId: string, descripcion: string, fechaReporte: string): boolean => {
+    return reportes.some(r => 
+      r.obraId === obraId && 
+      r.fecha === fechaReporte && 
+      r.descripcion.toLowerCase() === descripcion.toLowerCase() &&
+      r.id !== reporteEditandoId
+    );
+  };
+
+  // Valida límite de reportes por día (máximo 5)
+  const validarLimiteReportesXDia = (obraId: string, fechaReporte: string): boolean => {
+    const reportesDelDia = reportes.filter(r => 
+      r.obraId === obraId && 
+      r.fecha === fechaReporte &&
+      r.id !== reporteEditandoId
+    );
+    return reportesDelDia.length >= 5;
+  };
+
   // Maneja la sumisión del formulario: valida y guarda o actualiza el reporte
   const manejarEnvio = async (e: FormEvent) => {
     e.preventDefault();
     setAlerta(null);
     setCargando(true);
 
-    if (!obrasDisponibles) return setAlerta({ tipo: 'error', texto: 'No hay obras disponibles para asociar el informe.' });
+    if (!obrasDisponibles) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'No hay obras disponibles para asociar el informe.' });
+    }
 
-    if (!formulario.descripcion.trim()) return setAlerta({ tipo: 'error', texto: 'Descripción requerida para el informe.' });
+    const descTrimmed = formulario.descripcion.trim();
 
-    if (formulario.fecha > fechaHoy) return setAlerta({ tipo: 'error', texto: 'La fecha no puede ser mayor que la de hoy.' });
+    if (!descTrimmed) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'Descripción requerida para el informe.' });
+    }
+
+    if (descTrimmed.length < 10) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'La descripción debe tener al menos 10 caracteres.' });
+    }
+
+    if (descTrimmed.length > 500) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'La descripción no puede exceder 500 caracteres.' });
+    }
+
+    if (formulario.fecha > fechaHoy) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'La fecha no puede ser mayor que la de hoy.' });
+    }
+
+    if (validarReporteDuplicado(formulario.obraId, descTrimmed, formulario.fecha)) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'Ya existe un informe con la misma descripción para esta obra en esta fecha.' });
+    }
+
+    if (validarLimiteReportesXDia(formulario.obraId, formulario.fecha)) {
+      setCargando(false);
+      return setAlerta({ tipo: 'error', texto: 'No puedes crear más de 5 informes para la misma obra en un día.' });
+    }
 
     const datosReporte: Reporte = {
       id: reporteEditandoId || `reporte-${Date.now()}`,
       obraId: formulario.obraId,
       fecha: formulario.fecha,
-      descripcion: formulario.descripcion.trim(),
+      descripcion: descTrimmed,
     };
 
     try {
