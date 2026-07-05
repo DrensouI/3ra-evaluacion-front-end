@@ -40,7 +40,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.json(sesion);
   } catch (error) {
     console.error('Error autenticación:', error);
-    return res.status(500).json({ error: 'Error interno al autenticar.' });
+    return res.status(500).json({ error: 'Error interno al autenticar.', detalle: error.message });
   }
 });
 
