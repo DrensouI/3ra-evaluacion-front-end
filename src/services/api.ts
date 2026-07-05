@@ -1,6 +1,16 @@
 import { Obra, Personal, Reporte } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:4000/api';
+const TOKEN_KEY = 'hexacall_token';
+
+function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers = new Headers(init.headers);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return fetch(input, { ...init, headers });
+}
 
 async function verificarRespuesta<T>(response: Response): Promise<T> {
   const texto = await response.text();
@@ -11,12 +21,12 @@ async function verificarRespuesta<T>(response: Response): Promise<T> {
 }
 
 export async function obtenerObras(): Promise<Obra[]> {
-  const response = await fetch(`${API_BASE}/obras`);
+  const response = await authFetch(`${API_BASE}/obras`);
   return verificarRespuesta<Obra[]>(response);
 }
 
 export async function guardarObras(obras: Obra[]): Promise<void> {
-  const response = await fetch(`${API_BASE}/obras`, {
+  const response = await authFetch(`${API_BASE}/obras`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(obras),
@@ -25,12 +35,12 @@ export async function guardarObras(obras: Obra[]): Promise<void> {
 }
 
 export async function obtenerPersonal(): Promise<Personal[]> {
-  const response = await fetch(`${API_BASE}/personal`);
+  const response = await authFetch(`${API_BASE}/personal`);
   return verificarRespuesta<Personal[]>(response);
 }
 
 export async function guardarPersonal(personal: Personal[]): Promise<void> {
-  const response = await fetch(`${API_BASE}/personal`, {
+  const response = await authFetch(`${API_BASE}/personal`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(personal),
@@ -39,12 +49,12 @@ export async function guardarPersonal(personal: Personal[]): Promise<void> {
 }
 
 export async function obtenerReportes(): Promise<Reporte[]> {
-  const response = await fetch(`${API_BASE}/reportes`);
+  const response = await authFetch(`${API_BASE}/reportes`);
   return verificarRespuesta<Reporte[]>(response);
 }
 
 export async function guardarReportes(reportes: Reporte[]): Promise<void> {
-  const response = await fetch(`${API_BASE}/reportes`, {
+  const response = await authFetch(`${API_BASE}/reportes`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reportes),
@@ -53,7 +63,7 @@ export async function guardarReportes(reportes: Reporte[]): Promise<void> {
 }
 
 export async function migrarDatos(data: { obras: Obra[]; personal: Personal[]; reportes: Reporte[] }): Promise<void> {
-  const response = await fetch(`${API_BASE}/migrate`, {
+  const response = await authFetch(`${API_BASE}/migrate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -63,12 +73,12 @@ export async function migrarDatos(data: { obras: Obra[]; personal: Personal[]; r
 
 // Operaciones CRUD por documento - Obras
 export async function obtenerObraPorId(id: string): Promise<Obra> {
-  const response = await fetch(`${API_BASE}/obras/${encodeURIComponent(id)}`);
+  const response = await authFetch(`${API_BASE}/obras/${encodeURIComponent(id)}`);
   return verificarRespuesta<Obra>(response);
 }
 
 export async function crearObra(obra: Obra): Promise<Obra> {
-  const response = await fetch(`${API_BASE}/obras`, {
+  const response = await authFetch(`${API_BASE}/obras`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(obra),
@@ -77,7 +87,7 @@ export async function crearObra(obra: Obra): Promise<Obra> {
 }
 
 export async function actualizarObra(id: string, cambios: Partial<Obra>): Promise<Obra> {
-  const response = await fetch(`${API_BASE}/obras/${encodeURIComponent(id)}`, {
+  const response = await authFetch(`${API_BASE}/obras/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cambios),
@@ -86,13 +96,13 @@ export async function actualizarObra(id: string, cambios: Partial<Obra>): Promis
 }
 
 export async function eliminarObra(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/obras/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const response = await authFetch(`${API_BASE}/obras/${encodeURIComponent(id)}`, { method: 'DELETE' });
   await verificarRespuesta<void>(response);
 }
 
 // Personal
 export async function crearPersonal(personal: Personal): Promise<Personal> {
-  const response = await fetch(`${API_BASE}/personal`, {
+  const response = await authFetch(`${API_BASE}/personal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(personal),
@@ -101,7 +111,7 @@ export async function crearPersonal(personal: Personal): Promise<Personal> {
 }
 
 export async function actualizarPersonal(id: string, cambios: Partial<Personal>): Promise<Personal> {
-  const response = await fetch(`${API_BASE}/personal/${encodeURIComponent(id)}`, {
+  const response = await authFetch(`${API_BASE}/personal/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cambios),
@@ -110,13 +120,13 @@ export async function actualizarPersonal(id: string, cambios: Partial<Personal>)
 }
 
 export async function eliminarPersonalById(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/personal/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const response = await authFetch(`${API_BASE}/personal/${encodeURIComponent(id)}`, { method: 'DELETE' });
   await verificarRespuesta<void>(response);
 }
 
 // Reportes
 export async function crearReporte(reporte: Reporte): Promise<Reporte> {
-  const response = await fetch(`${API_BASE}/reportes`, {
+  const response = await authFetch(`${API_BASE}/reportes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reporte),
@@ -125,7 +135,7 @@ export async function crearReporte(reporte: Reporte): Promise<Reporte> {
 }
 
 export async function actualizarReporte(id: string, cambios: Partial<Reporte>): Promise<Reporte> {
-  const response = await fetch(`${API_BASE}/reportes/${encodeURIComponent(id)}`, {
+  const response = await authFetch(`${API_BASE}/reportes/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cambios),
@@ -134,6 +144,6 @@ export async function actualizarReporte(id: string, cambios: Partial<Reporte>): 
 }
 
 export async function eliminarReporteById(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/reportes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const response = await authFetch(`${API_BASE}/reportes/${encodeURIComponent(id)}`, { method: 'DELETE' });
   await verificarRespuesta<void>(response);
 }

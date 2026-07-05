@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { SesionUsuario } from '../types';
-import { loginAdmin } from '../services/auth';
+import { loginAdmin, guardarToken, borrarToken } from '../services/auth';
 
 const CLAVE_SESION = 'hexacall_sesion';
 
@@ -40,13 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const sesion = await loginAdmin(correoNormalizado, claveIngresada);
+      const respuesta = await loginAdmin(correoNormalizado, claveIngresada);
       const datosSesionUsuario: SesionUsuario = {
-        correo: sesion.correo,
-        nombre: sesion.nombre,
-        rol: sesion.rol,
+        correo: respuesta.usuario.correo,
+        nombre: respuesta.usuario.nombre,
+        rol: respuesta.usuario.rol,
       };
 
+      guardarToken(respuesta.token);
       localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesionUsuario));
       setUsuario(datosSesionUsuario);
       return true;
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Función logout que remueve todo rastro de la sesión actual (Definición de logout).
   const logout = () => {
     localStorage.removeItem(CLAVE_SESION);
+    borrarToken();
     setUsuario(null);
     setErrorLogin(null);
   };

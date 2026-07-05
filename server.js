@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
 import { autenticarAdministrador } from './server/models/usuario.js';
 import { getDb } from './server/db.js';
 
@@ -13,10 +14,92 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 4000;
+const jwtSecret = process.env.JWT_SECRET || 'hexacall_jwt_secret';
+const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1h';
+
+function generarToken(payload) {
+  return jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
+}
+
+function autenticarToken(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token de autorización faltante o inválido.' });
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    req.user = jwt.verify(token, jwtSecret);
+    return next();
+  } catch (error) {
+    console.error('Token inválido:', error.message);
+    return res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+}
+
+function esTextoValido(valor) {
+  return typeof valor === 'string' && valor.trim().length > 0;
+}
+
+function esCorreoValido(correo) {
+  return typeof correo === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim());
+}
+
+function esFechaValida(fecha) {
+  if (typeof fecha !== 'string') return false;
+  const fechaObj = new Date(fecha);
+  return !Number.isNaN(fechaObj.getTime()) && fecha === fechaObj.toISOString().slice(0, 10);
+}
+
+function validarObra(obra) {
+  if (!obra || typeof obra !== 'object') return 'Datos de obra inválidos.';
+  if (!obra.id || typeof obra.id !== 'string') return 'ID de obra inválido.';
+  if (!esTextoValido(obra.nombre) || obra.nombre.trim().length < 5 || obra.nombre.trim().length > 100) return 'Nombre de obra inválido.';
+  const estadosValidos = ['en curso', 'pausada', 'finalizada'];
+  if (!estadosValidos.includes(obra.estado)) return 'Estado de obra inválido.';
+  if (obra.ubicacion && (typeof obra.ubicacion !== 'string' || obra.ubicacion.trim().length < 5)) return 'Ubicación inválida.';
+  if (obra.presupuesto !== undefined && obra.presupuesto !== null) {
+    if (typeof obra.presupuesto !== 'number' || obra.presupuesto < 0 || obra.presupuesto > 1000000000) return 'Presupuesto inválido.';
+  }
+  return null;
+}
+
+function validarPersonal(empleado) {
+  if (!empleado || typeof empleado !== 'object') return 'Datos de empleado inválidos.';
+  if (!empleado.id || typeof empleado.id !== 'string') return 'ID de empleado inválido.';
+  if (!esTextoValido(empleado.nombre) || empleado.nombre.trim().length < 5 || empleado.nombre.trim().length > 100) return 'Nombre de empleado inválido.';
+  if (!esTextoValido(empleado.cargo) || empleado.cargo.trim().length < 3) return 'Cargo de empleado inválido.';
+  if (!empleado.obraId || typeof empleado.obraId !== 'string') return 'Obra asignada inválida.';
+  return null;
+}
+
+function validarReporte(reporte) {
+  if (!reporte || typeof reporte !== 'object') return 'Datos de reporte inválidos.';
+  if (!reporte.id || typeof reporte.id !== 'string') return 'ID de reporte inválido.';
+  if (!reporte.obraId || typeof reporte.obraId !== 'string') return 'Obra asignada inválida.';
+  if (!esFechaValida(reporte.fecha)) return 'Fecha de reporte inválida.';
+  const hoy = new Date().toISOString().slice(0, 10);
+  if (reporte.fecha > hoy) return 'La fecha del reporte no puede ser futura.';
+  if (!esTextoValido(reporte.descripcion) || reporte.descripcion.trim().length < 10 || reporte.descripcion.trim().length > 500) return 'Descripción del reporte inválida.';
+  return null;
+}
+
+function validarArreglo(items, validador) {
+  if (!Array.isArray(items)) return 'Payload inválido.';
+  for (const item of items) {
+    const error = validador(item);
+    if (error) return error;
+  }
+  return null;
+}
 
 app.use(cors({ origin: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/api/obras', autenticarToken);
+app.use('/api/personal', autenticarToken);
+app.use('/api/reportes', autenticarToken);
+app.use('/api/migrate', autenticarToken);
 
 app.post('/api/auth/login', async (req, res) => {
   const { correo, clave } = req.body;
@@ -37,8 +120,9 @@ app.post('/api/auth/login', async (req, res) => {
       rol: usuario.rol,
       ultimoAcceso: new Date().toISOString(),
     };
+    const token = generarToken({ correo: usuario.correo, nombre: usuario.nombre, rol: usuario.rol });
 
-    return res.json(sesion);
+    return res.json({ token, usuario: sesion });
   } catch (error) {
     console.error('Error autenticación:', error);
     return res.status(500).json({ error: 'Error interno al autenticar.', detalle: error.message });
@@ -62,6 +146,10 @@ app.get('/api/personal', async (req, res) => {
 
 app.put('/api/personal', async (req, res) => {
   const personal = Array.isArray(req.body) ? req.body : [];
+  const errorValidacion = validarArreglo(personal, validarPersonal);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
+  }
   try {
     const db = await getDb();
     const coleccion = db.collection('empleados');
@@ -78,8 +166,9 @@ app.put('/api/personal', async (req, res) => {
 
 app.post('/api/personal', async (req, res) => {
   const empleado = req.body;
-  if (!empleado || !empleado.id) {
-    return res.status(400).json({ error: 'Datos de empleado inválidos.' });
+  const errorValidacion = validarPersonal(empleado);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
   }
 
   try {
@@ -95,6 +184,11 @@ app.post('/api/personal', async (req, res) => {
 app.put('/api/personal/:id', async (req, res) => {
   const { id } = req.params;
   const cambios = req.body;
+  const empleado = { id, ...cambios };
+  const errorValidacion = validarPersonal(empleado);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
+  }
 
   try {
     const db = await getDb();
@@ -144,6 +238,10 @@ app.get('/api/obras', async (req, res) => {
 
 app.put('/api/obras', async (req, res) => {
   const obras = Array.isArray(req.body) ? req.body : [];
+  const errorValidacion = validarArreglo(obras, validarObra);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
+  }
   try {
     const db = await getDb();
     const coleccion = db.collection('obras');
@@ -175,8 +273,9 @@ app.get('/api/obras/:id', async (req, res) => {
 
 app.post('/api/obras', async (req, res) => {
   const obra = req.body;
-  if (!obra || !obra.id) {
-    return res.status(400).json({ error: 'Datos de obra inválidos.' });
+  const errorValidacion = validarObra(obra);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
   }
 
   try {
@@ -192,6 +291,11 @@ app.post('/api/obras', async (req, res) => {
 app.put('/api/obras/:id', async (req, res) => {
   const { id } = req.params;
   const cambios = req.body;
+  const obra = { id, ...cambios };
+  const errorValidacion = validarObra(obra);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
+  }
 
   try {
     const db = await getDb();
@@ -242,6 +346,10 @@ app.get('/api/reportes', async (req, res) => {
 
 app.put('/api/reportes', async (req, res) => {
   const reportes = Array.isArray(req.body) ? req.body : [];
+  const errorValidacion = validarArreglo(reportes, validarReporte);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
+  }
   try {
     const db = await getDb();
     const coleccion = db.collection('reportes');
@@ -258,8 +366,9 @@ app.put('/api/reportes', async (req, res) => {
 
 app.post('/api/reportes', async (req, res) => {
   const reporte = req.body;
-  if (!reporte || !reporte.id) {
-    return res.status(400).json({ error: 'Datos de reporte inválidos.' });
+  const errorValidacion = validarReporte(reporte);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
   }
 
   try {
@@ -275,6 +384,11 @@ app.post('/api/reportes', async (req, res) => {
 app.put('/api/reportes/:id', async (req, res) => {
   const { id } = req.params;
   const cambios = req.body;
+  const reporte = { id, ...cambios };
+  const errorValidacion = validarReporte(reporte);
+  if (errorValidacion) {
+    return res.status(400).json({ error: errorValidacion });
+  }
 
   try {
     const db = await getDb();
