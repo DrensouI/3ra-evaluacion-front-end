@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { autenticarAdministrador } from './server/models/usuario.js';
+import { getDb } from './server/db.js';
 
 dotenv.config();
 
@@ -46,6 +47,88 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/ping', (req, res) => {
   res.json({ ok: true });
+});
+
+app.get('/api/personal', async (req, res) => {
+  try {
+    const db = await getDb();
+    const personal = await db.collection('empleados').find().toArray();
+    return res.json(personal);
+  } catch (error) {
+    console.error('Error al obtener personal:', error);
+    return res.status(500).json({ error: 'Error al obtener personal.' });
+  }
+});
+
+app.put('/api/personal', async (req, res) => {
+  const personal = Array.isArray(req.body) ? req.body : [];
+  try {
+    const db = await getDb();
+    const coleccion = db.collection('empleados');
+    await coleccion.deleteMany({});
+    if (personal.length > 0) {
+      await coleccion.insertMany(personal);
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error al guardar personal:', error);
+    return res.status(500).json({ error: 'Error al guardar personal.' });
+  }
+});
+
+app.post('/api/personal', async (req, res) => {
+  const empleado = req.body;
+  if (!empleado || !empleado.id) {
+    return res.status(400).json({ error: 'Datos de empleado inválidos.' });
+  }
+
+  try {
+    const db = await getDb();
+    await db.collection('empleados').insertOne(empleado);
+    return res.status(201).json(empleado);
+  } catch (error) {
+    console.error('Error al crear empleado:', error);
+    return res.status(500).json({ error: 'Error al crear empleado.' });
+  }
+});
+
+app.put('/api/personal/:id', async (req, res) => {
+  const { id } = req.params;
+  const cambios = req.body;
+
+  try {
+    const db = await getDb();
+    const resultado = await db.collection('empleados').findOneAndUpdate(
+      { id },
+      { $set: cambios },
+      { returnDocument: 'after' },
+    );
+
+    if (!resultado.value) {
+      return res.status(404).json({ error: 'Empleado no encontrado.' });
+    }
+
+    return res.json(resultado.value);
+  } catch (error) {
+    console.error('Error al actualizar empleado:', error);
+    return res.status(500).json({ error: 'Error al actualizar empleado.' });
+  }
+});
+
+app.delete('/api/personal/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const db = await getDb();
+    const resultado = await db.collection('empleados').deleteOne({ id });
+    if (resultado.deletedCount === 0) {
+      return res.status(404).json({ error: 'Empleado no encontrado.' });
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error al eliminar empleado:', error);
+    return res.status(500).json({ error: 'Error al eliminar empleado.' });
+  }
 });
 
 app.listen(port, () => {
