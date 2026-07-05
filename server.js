@@ -228,6 +228,34 @@ app.delete('/api/obras/:id', async (req, res) => {
   }
 });
 
+app.post('/api/migrate', async (req, res) => {
+  const { obras, personal, reportes } = req.body;
+
+  if (!Array.isArray(obras) || !Array.isArray(personal) || !Array.isArray(reportes)) {
+    return res.status(400).json({ error: 'Payload de migración inválido.' });
+  }
+
+  try {
+    const db = await getDb();
+    await Promise.all([
+      db.collection('obras').deleteMany({}),
+      db.collection('empleados').deleteMany({}),
+      db.collection('reportes').deleteMany({}),
+    ]);
+
+    await Promise.all([
+      obras.length ? db.collection('obras').insertMany(obras) : Promise.resolve(),
+      personal.length ? db.collection('empleados').insertMany(personal) : Promise.resolve(),
+      reportes.length ? db.collection('reportes').insertMany(reportes) : Promise.resolve(),
+    ]);
+
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error('Error al migrar datos a MongoDB:', error);
+    return res.status(500).json({ error: 'Error al migrar datos a MongoDB.' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`API server running on http://localhost:${port}`);
 });
