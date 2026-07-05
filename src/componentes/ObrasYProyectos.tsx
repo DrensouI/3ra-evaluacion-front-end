@@ -1,15 +1,9 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Obra, EstadoObra } from '../types';
+import { ObrasYProyectosProps, EstadoObra, Obra } from '../types';
 import { formatearMoneda } from '../utils';
 import './obras-proyectos.css';
 
-type ObrasYProyectosProps = {
-  obras: Obra[];
-  guardarObras: (obras: Obra[]) => void;
-  selectedId?: string | undefined;
-};
-
-export default function ObrasYProyectos({ obras, guardarObras, selectedId }: ObrasYProyectosProps) {
+export default function ObrasYProyectos({ obras, guardarObras, selectedId, crearObra, actualizarObra, eliminarObra }: ObrasYProyectosProps) {
   const [obraEnEdicion, setObraEnEdicion] = useState<Obra | null>(null);
   const [formulario, setFormulario] = useState({ nombre: '', ubicacion: '', estado: 'en curso' as EstadoObra, presupuesto: '' });
   const [alertaError, setAlertaError] = useState<string | null>(null);
@@ -23,7 +17,7 @@ export default function ObrasYProyectos({ obras, guardarObras, selectedId }: Obr
     setAlertaError(null);
   };
 
-  const manejarEnvioObra = (e: FormEvent) => {
+  const manejarEnvioObra = async (e: FormEvent) => {
     e.preventDefault();
     setAlertaError(null);
 
@@ -43,18 +37,33 @@ export default function ObrasYProyectos({ obras, guardarObras, selectedId }: Obr
       ? obras.map(o => o.id === obraEnEdicion.id ? datosObra : o)
       : [datosObra, ...obras];
 
-    guardarObras(obrasActualizadas);
+    if (obraEnEdicion && actualizarObra) {
+      await actualizarObra(obraEnEdicion.id, datosObra);
+    } else if (!obraEnEdicion && crearObra) {
+      await crearObra(datosObra);
+    } else {
+      guardarObras(obrasActualizadas);
+    }
     limpiarFormulario();
   };
 
-  const eliminarObra = (id: string) => {
+  const handleEliminarObra = (id: string) => {
     if (!window.confirm('¿Estás seguro de eliminar esta obra?')) return;
-    guardarObras(obras.filter(o => o.id !== id));
+    if (eliminarObra) {
+      eliminarObra(id);
+    } else {
+      guardarObras(obras.filter(o => o.id !== id));
+    }
     if (obraEnEdicion?.id === id) limpiarFormulario();
   };
 
   const actualizarEstado = (id: string, nuevoEstado: EstadoObra) => {
-    guardarObras(obras.map(o => o.id === id ? { ...o, estado: nuevoEstado } : o));
+    const actualizado = obras.map(o => o.id === id ? { ...o, estado: nuevoEstado } : o);
+    if (actualizarObra) {
+      actualizarObra(id, { estado: nuevoEstado });
+    } else {
+      guardarObras(actualizado);
+    }
   };
 
   const iniciarEdicion = (obra: Obra) => {
@@ -148,7 +157,7 @@ export default function ObrasYProyectos({ obras, guardarObras, selectedId }: Obr
                       <option value="finalizada">Finalizada</option>
                     </select>
                     <button type="button" className="op-btn-accion op-btn-editar" onClick={() => iniciarEdicion(obra)}>Editar</button>
-                    <button type="button" className="op-btn-accion op-btn-eliminar" onClick={() => eliminarObra(obra.id)}>Eliminar</button>
+                    <button type="button" className="op-btn-accion op-btn-eliminar" onClick={() => handleEliminarObra(obra.id)}>Eliminar</button>
                   </div>
                 </article>
               ))}

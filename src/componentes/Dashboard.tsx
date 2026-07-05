@@ -5,7 +5,12 @@ import './dashboard.css';
 
 /*
  * Componente Icon: Renderiza SVGs reutilizables con tamaño dinámico.*/
-const Icon = ({ children, width = "16" }: { children: React.ReactNode; width?: string }) => (
+interface IconProps {
+  children: React.ReactNode;
+  width?: string;
+}
+
+const Icon = ({ children, width = '16' }: IconProps) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width={width} height={width} aria-hidden>
     {children}
   </svg>
@@ -13,7 +18,7 @@ const Icon = ({ children, width = "16" }: { children: React.ReactNode; width?: s
 
 
 
-export default function Dashboard({ obras, personal, reportes, alNavegarPestaña, logout, usuario }: DashboardProps) {
+export default function Dashboard({ obras, personal, reportes, alNavegarPestaña, logout, usuario, origenDatos, sincronizarDatos, mensajeSync }: DashboardProps) {
   // Total de proyectos cargados (usado para porcentajes y tablas)
   const totalDeObras = obras.length;
 
@@ -76,17 +81,21 @@ export default function Dashboard({ obras, personal, reportes, alNavegarPestaña
           <p className="dashboard-subtitle">Indicadores clave de rendimiento, estados de obras y reportes.</p>
         </div>
         <div className="dashboard-header-actions">
-          {/* usuario viene del AuthContext, propagado desde main.tsx */}
-          {usuario && (
-            <div>
-              <span className="user-chip-name">{usuario.nombre}</span>
-              <span className="user-chip-role">{usuario.rol}</span>
-            </div>
+          <div className="dashboard-user-status">
+            {usuario && (
+              <>
+                <span className="user-chip-name">{usuario.nombre}</span>
+                <span className="user-chip-role">{usuario.rol}</span>
+              </>
+            )}
+            <span className={`dashboard-status-pill dashboard-status-pill--${origenDatos}`}>{origenDatos === 'api' ? 'MongoDB activo' : origenDatos === 'local' ? 'LocalStorage activo' : 'Sincronización fallida'}</span>
+          </div>
+          {sincronizarDatos && (
+            <button type="button" className="sync-button" onClick={sincronizarDatos}>Sincronizar con MongoDB</button>
           )}
-          <span className="dashboard-status-pill">Terminal Activa</span>
-          {/* Logout: limpia contexto y localStorage, redirige a login (función del AuthContext) */}
           <button type="button" className="logout-button" onClick={logout}>Cerrar sesión</button>
         </div>
+        {mensajeSync && <div className="dashboard-sync-message">{mensajeSync}</div>}
       </header>
 
       {/*TARJETAS*/}

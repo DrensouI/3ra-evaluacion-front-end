@@ -1,18 +1,8 @@
 import React, { useState, FormEvent } from 'react';
-import { Obra, Personal } from '../types'; 
+import { EmpleadosProps, Personal } from '../types';
 import './personal.css';
 
-import { sanitizarTexto} from '../utils';
-
-
-/*Le avisa al archivo 'main.tsx' lo que tiene que pasarle al 'Personal.tsx (obras y personal)' 
-para guardar los cambios correctamente en el localStorage*/
-type EmpleadosProps = {
-  obras: Obra[];
-  personal: Personal[];
-  guardarPersonal: (nuevoPersonal: Personal[]) => void;
-};
-
+import { sanitizarTexto } from '../utils';
 
 export default function Empleados({ obras, personal, guardarPersonal }: EmpleadosProps) {
   /*Si el ID de un operador se esta editando, se remplaza solamente los datos viejos manteniendo el ID

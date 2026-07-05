@@ -1,15 +1,11 @@
 import React, { useState, FormEvent } from 'react';
-import { Obra, Reporte } from '../types';
+import { Obra, Reporte, ReportesProps } from '../types';
 import './reportes.css';
 
 // Fecha actual en formato YYYY-MM-DD (usada para validación de fecha)
 const fechaHoy = new Date().toISOString().slice(0, 10);
 
-type ReportesProps = { obras: Obra[]; reportes: Reporte[]; guardarReportes: (reportes: Reporte[]) => void };
-
-
- /* Persistencia: Los datos se guardan en localStorage a través de guardarReportes()
- */
+/* Persistencia: Los datos se guardan en localStorage a través de guardarReportes() */
 export default function Reportes({ obras, reportes, guardarReportes }: ReportesProps) {
   // id del reporte que se está editando (null => creando uno nuevo)
   const [reporteEditandoId, setReporteEditandoId] = useState<string | null>(null);

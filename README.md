@@ -23,6 +23,22 @@ Usuario por defecto para prueba:
 - Correo: `admin@admin.com`
 - Contraseña: `123456`
 
+MongoDB Atlas
+1. Crea un cluster en MongoDB Atlas.
+2. Agrega tu IP local a la lista de acceso de red.
+3. Crea un usuario de base de datos con contraseña segura.
+4. Copia la URI de conexión y crea un archivo `.env` en la raíz del proyecto con estas variables:
+
+```env
+MONGO_URI="mongodb+srv://<usuario>:<contraseña>@<cluster>.mongodb.net"
+MONGO_DB="hexacall_db"
+VITE_API_BASE="http://localhost:4000/api"
+```
+
+5. Ejecuta el servidor API con `npm run server`.
+6. Ejecuta el frontend con `npm run dev`.
+7. Abre el navegador en `http://localhost:3001`.
+
 Estructura y archivos relevantes
 `src/context/AuthContext.tsx`: manejo de sesión, `login`/`logout` y persistencia en `localStorage`.
 `src/componentes/Login.tsx`: formulario de inicio de sesión y validaciones locales. 
