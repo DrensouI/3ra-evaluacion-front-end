@@ -30,7 +30,7 @@ export default function Login() {
     setCredencialesUsuario(prev => ({ ...prev, [name]: value }));
 
   // valida y delega el login al contexto
-  const manejarEnvio = (e: React.FormEvent) => {
+  const manejarEnvio = async (e: React.FormEvent) => {
     e.preventDefault();
     const correoLimpio = credencialesUsuario.correo.trim();
 
@@ -46,7 +46,8 @@ export default function Login() {
     }
 
     // Si pasa los filtros, se dispara la función login del contexto (login(correo, clave)).
-    if (login(correoLimpio, credencialesUsuario.clave)) {
+    const loginExitoso = await login(correoLimpio, credencialesUsuario.clave);
+    if (loginExitoso) {
       navigate('/dashboard');
     } else {
       setErrorValidacionLocal('Credenciales incorrectas. Verifique los datos.');

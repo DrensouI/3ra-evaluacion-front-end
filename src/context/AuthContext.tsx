@@ -1,17 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
 import { SesionUsuario } from '../types';
+import { loginAdmin } from '../services/auth';
 
 const CLAVE_SESION = 'hexacall_sesion';
-
-const USUARIOS_PREDETERMINADOS = [
-  { correo: 'admin@admin.com', clave: '123456', nombre: 'Luis Alberto Rojas', rol: 'administrador' },
-  
-];
 
 interface AuthContextType {
   usuario: SesionUsuario | null;
   estaAutenticado: boolean;
-  login: (correo: string, clave: string) => boolean;
+  login: (correo: string, clave: string) => Promise<boolean>;
   logout: () => void;
   errorLogin: string | null;
 }
@@ -33,27 +29,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<SesionUsuario | null>(cargarSesionDesdeStorage);
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
 
-  //  Función login que busca coincidencia de credenciales en el arreglo.
-  const login = (correoIngresado: string, claveIngresada: string): boolean => {
+  // Función login que intenta autenticar contra el endpoint backend y guarda la sesión en localStorage.
+  const login = async (correoIngresado: string, claveIngresada: string): Promise<boolean> => {
     setErrorLogin(null);
     const correoNormalizado = correoIngresado.trim().toLowerCase();
 
-    const usuarioEncontrado = USUARIOS_PREDETERMINADOS.find(u => u.correo.toLowerCase() === correoNormalizado && u.clave === claveIngresada);
-    if (!usuarioEncontrado) {
-      setErrorLogin('Credenciales inválidas. Correo o contraseña incorrectos.');
+    if (!correoNormalizado.includes('@') || claveIngresada.length < 4) {
+      setErrorLogin('Correo o contraseña inválidos.');
       return false;
     }
 
-    const datosSesionUsuario: SesionUsuario = {
-      correo: usuarioEncontrado.correo,
-      nombre: usuarioEncontrado.nombre,
-      rol: usuarioEncontrado.rol,
-    };
+    try {
+      const sesion = await loginAdmin(correoNormalizado, claveIngresada);
+      const datosSesionUsuario: SesionUsuario = {
+        correo: sesion.correo,
+        nombre: sesion.nombre,
+        rol: sesion.rol,
+      };
 
-    // Se persiste el usuario en el navegador y se actualiza el estado reactivo (localStorage.setItem y setUsuario).
-    localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesionUsuario));
-    setUsuario(datosSesionUsuario);
-    return true;
+      localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesionUsuario));
+      setUsuario(datosSesionUsuario);
+      return true;
+    } catch (error) {
+      console.error('Error en login:', error);
+      setErrorLogin('Credenciales incorrectas o error del servidor.');
+      return false;
+    }
   };
 
   // Función logout que remueve todo rastro de la sesión actual (Definición de logout).
