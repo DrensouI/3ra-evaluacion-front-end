@@ -131,6 +131,103 @@ app.delete('/api/personal/:id', async (req, res) => {
   }
 });
 
+app.get('/api/obras', async (req, res) => {
+  try {
+    const db = await getDb();
+    const obras = await db.collection('obras').find().toArray();
+    return res.json(obras);
+  } catch (error) {
+    console.error('Error al obtener obras:', error);
+    return res.status(500).json({ error: 'Error al obtener obras.' });
+  }
+});
+
+app.put('/api/obras', async (req, res) => {
+  const obras = Array.isArray(req.body) ? req.body : [];
+  try {
+    const db = await getDb();
+    const coleccion = db.collection('obras');
+    await coleccion.deleteMany({});
+    if (obras.length > 0) {
+      await coleccion.insertMany(obras);
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error al guardar obras:', error);
+    return res.status(500).json({ error: 'Error al guardar obras.' });
+  }
+});
+
+app.get('/api/obras/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const db = await getDb();
+    const obra = await db.collection('obras').findOne({ id });
+    if (!obra) {
+      return res.status(404).json({ error: 'Obra no encontrada.' });
+    }
+    return res.json(obra);
+  } catch (error) {
+    console.error('Error al obtener obra:', error);
+    return res.status(500).json({ error: 'Error al obtener obra.' });
+  }
+});
+
+app.post('/api/obras', async (req, res) => {
+  const obra = req.body;
+  if (!obra || !obra.id) {
+    return res.status(400).json({ error: 'Datos de obra inválidos.' });
+  }
+
+  try {
+    const db = await getDb();
+    await db.collection('obras').insertOne(obra);
+    return res.status(201).json(obra);
+  } catch (error) {
+    console.error('Error al crear obra:', error);
+    return res.status(500).json({ error: 'Error al crear obra.' });
+  }
+});
+
+app.put('/api/obras/:id', async (req, res) => {
+  const { id } = req.params;
+  const cambios = req.body;
+
+  try {
+    const db = await getDb();
+    const resultado = await db.collection('obras').findOneAndUpdate(
+      { id },
+      { $set: cambios },
+      { returnDocument: 'after' },
+    );
+
+    if (!resultado.value) {
+      return res.status(404).json({ error: 'Obra no encontrada.' });
+    }
+
+    return res.json(resultado.value);
+  } catch (error) {
+    console.error('Error al actualizar obra:', error);
+    return res.status(500).json({ error: 'Error al actualizar obra.' });
+  }
+});
+
+app.delete('/api/obras/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const db = await getDb();
+    const resultado = await db.collection('obras').deleteOne({ id });
+    if (resultado.deletedCount === 0) {
+      return res.status(404).json({ error: 'Obra no encontrada.' });
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error al eliminar obra:', error);
+    return res.status(500).json({ error: 'Error al eliminar obra.' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`API server running on http://localhost:${port}`);
 });
