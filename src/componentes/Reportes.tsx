@@ -1,12 +1,13 @@
 import React, { useState, FormEvent } from 'react';
 import { Obra, Reporte, ReportesProps } from '../types';
+import { crearReporte, actualizarReporte, eliminarReporteById } from '../services/api';
 import './reportes.css';
 
 // Fecha actual en formato YYYY-MM-DD (usada para validación de fecha)
 const fechaHoy = new Date().toISOString().slice(0, 10);
 
-/* Persistencia: Los datos se guardan en localStorage a través de guardarReportes() */
-export default function Reportes({ obras, reportes, guardarReportes }: ReportesProps) {
+/* Persistencia: Los datos se guardan en MongoDB a través de los endpoints de la API */
+export default function Reportes({ obras, reportes, guardarReportes, crearReporte: crearReporteCtx, actualizarReporte: actualizarReporteCtx, eliminarReporte: eliminarReporteCtx }: ReportesProps) {
   // id del reporte que se está editando (null => creando uno nuevo)
   const [reporteEditandoId, setReporteEditandoId] = useState<string | null>(null);
 
@@ -15,6 +16,9 @@ export default function Reportes({ obras, reportes, guardarReportes }: ReportesP
 
   // Mensajes de UI para mostrar errores o notificaciones de éxito
   const [alerta, setAlerta] = useState<{ tipo: 'error' | 'success'; texto: string } | null>(null);
+
+  // Estado de carga para las operaciones de API
+  const [cargando, setCargando] = useState(false);
 
   // Variables derivadas para la UI
   const obrasDisponibles = obras.length > 0;
@@ -31,9 +35,10 @@ export default function Reportes({ obras, reportes, guardarReportes }: ReportesP
   };
 
   // Maneja la sumisión del formulario: valida y guarda o actualiza el reporte
-  const manejarEnvio = (e: FormEvent) => {
+  const manejarEnvio = async (e: FormEvent) => {
     e.preventDefault();
     setAlerta(null);
+    setCargando(true);
 
     if (!obrasDisponibles) return setAlerta({ tipo: 'error', texto: 'No hay obras disponibles para asociar el informe.' });
 
@@ -48,32 +53,46 @@ export default function Reportes({ obras, reportes, guardarReportes }: ReportesP
       descripcion: formulario.descripcion.trim(),
     };
 
-    const actualizados = reporteEditandoId
-      ? reportes.map(r => r.id === reporteEditandoId ? datosReporte : r)
-      : [datosReporte, ...reportes];
-
     try {
-      guardarReportes(actualizados);
-      setAlerta({ tipo: 'success', texto: estaEnEdicion ? 'Informe actualizado correctamente.' : 'Informe creado correctamente.' });
+      if (reporteEditandoId) {
+        // Actualizar reporte existente
+        await actualizarReporte(datosReporte.id, {
+          obraId: datosReporte.obraId,
+          fecha: datosReporte.fecha,
+          descripcion: datosReporte.descripcion,
+        });
+        actualizarReporteCtx && await actualizarReporteCtx(datosReporte.id, datosReporte);
+      } else {
+        // Crear nuevo reporte
+        await crearReporte(datosReporte);
+        crearReporteCtx && await crearReporteCtx(datosReporte);
+      }
+      setAlerta({ tipo: 'success', texto: reporteEditandoId ? 'Informe actualizado correctamente.' : 'Informe creado correctamente.' });
       limpiarFormulario();
       window.setTimeout(() => setAlerta(null), 3000);
     } catch (err) {
       console.error(err);
       setAlerta({ tipo: 'error', texto: 'Ocurrió un error inesperado al guardar el informe.' });
+    } finally {
+      setCargando(false);
     }
   };
 
   // Elimina un reporte con confirmación del usuario
-  const eliminarReporte = (id: string) => {
+  const eliminarReporte = async (id: string) => {
     if (!confirm('¿Eliminar este informe?')) return;
+    setCargando(true);
     try {
-      guardarReportes(reportes.filter(r => r.id !== id));
+      await eliminarReporteById(id);
+      eliminarReporteCtx && await eliminarReporteCtx(id);
       setAlerta({ tipo: 'success', texto: 'Informe eliminado correctamente.' });
       if (reporteEditandoId === id) limpiarFormulario();
       window.setTimeout(() => setAlerta(null), 2500);
     } catch (err) {
       console.error(err);
       setAlerta({ tipo: 'error', texto: 'Ocurrió un error inesperado al eliminar el informe.' });
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -118,8 +137,8 @@ export default function Reportes({ obras, reportes, guardarReportes }: ReportesP
             <textarea id="reporte-descripcion" rows={5} placeholder="Describe los avances, hallazgos o novedades del día..." value={formulario.descripcion} onChange={e => setFormulario(prev => ({ ...prev, descripcion: e.target.value }))} disabled={!obrasDisponibles} />
 
             <div className="reportes-form-actions">
-              <button type="submit" className="btn-crear-reporte" disabled={!obrasDisponibles}>{estaEnEdicion ? 'Guardar cambios' : 'Crear informe'}</button>
-              {estaEnEdicion && <button type="button" className="btn-cancelar-edicion" onClick={limpiarFormulario}>Cancelar edición</button>}
+              <button type="submit" className="btn-crear-reporte" disabled={!obrasDisponibles || cargando}>{estaEnEdicion ? 'Guardar cambios' : 'Crear informe'}</button>
+              {estaEnEdicion && <button type="button" className="btn-cancelar-edicion" onClick={limpiarFormulario} disabled={cargando}>Cancelar edición</button>}
             </div>
           </form>
         </div>
@@ -147,8 +166,8 @@ export default function Reportes({ obras, reportes, guardarReportes }: ReportesP
                     <p>{reporte.descripcion}</p>
                     {/* Botones de CRUD: editar abre el formulario, eliminar pide confirmación */}
                     <div className="reporte-acciones">
-                      <button type="button" className="btn-editar-reporte" onClick={() => iniciarEdicion(reporte)}>Editar</button>
-                      <button type="button" className="btn-eliminar-reporte" onClick={() => eliminarReporte(reporte.id)}>Eliminar</button>
+                      <button type="button" className="btn-editar-reporte" onClick={() => iniciarEdicion(reporte)} disabled={cargando}>Editar</button>
+                      <button type="button" className="btn-eliminar-reporte" onClick={() => eliminarReporte(reporte.id)} disabled={cargando}>Eliminar</button>
                     </div>
                   </article>
                 );

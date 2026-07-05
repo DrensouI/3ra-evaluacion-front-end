@@ -228,6 +228,89 @@ app.delete('/api/obras/:id', async (req, res) => {
   }
 });
 
+// Reportes CRUD
+app.get('/api/reportes', async (req, res) => {
+  try {
+    const db = await getDb();
+    const reportes = await db.collection('reportes').find().toArray();
+    return res.json(reportes);
+  } catch (error) {
+    console.error('Error al obtener reportes:', error);
+    return res.status(500).json({ error: 'Error al obtener reportes.' });
+  }
+});
+
+app.put('/api/reportes', async (req, res) => {
+  const reportes = Array.isArray(req.body) ? req.body : [];
+  try {
+    const db = await getDb();
+    const coleccion = db.collection('reportes');
+    await coleccion.deleteMany({});
+    if (reportes.length > 0) {
+      await coleccion.insertMany(reportes);
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error al guardar reportes:', error);
+    return res.status(500).json({ error: 'Error al guardar reportes.' });
+  }
+});
+
+app.post('/api/reportes', async (req, res) => {
+  const reporte = req.body;
+  if (!reporte || !reporte.id) {
+    return res.status(400).json({ error: 'Datos de reporte inválidos.' });
+  }
+
+  try {
+    const db = await getDb();
+    await db.collection('reportes').insertOne(reporte);
+    return res.status(201).json(reporte);
+  } catch (error) {
+    console.error('Error al crear reporte:', error);
+    return res.status(500).json({ error: 'Error al crear reporte.' });
+  }
+});
+
+app.put('/api/reportes/:id', async (req, res) => {
+  const { id } = req.params;
+  const cambios = req.body;
+
+  try {
+    const db = await getDb();
+    const resultado = await db.collection('reportes').findOneAndUpdate(
+      { id },
+      { $set: cambios },
+      { returnDocument: 'after' },
+    );
+
+    if (!resultado.value) {
+      return res.status(404).json({ error: 'Reporte no encontrado.' });
+    }
+
+    return res.json(resultado.value);
+  } catch (error) {
+    console.error('Error al actualizar reporte:', error);
+    return res.status(500).json({ error: 'Error al actualizar reporte.' });
+  }
+});
+
+app.delete('/api/reportes/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const db = await getDb();
+    const resultado = await db.collection('reportes').deleteOne({ id });
+    if (resultado.deletedCount === 0) {
+      return res.status(404).json({ error: 'Reporte no encontrado.' });
+    }
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error al eliminar reporte:', error);
+    return res.status(500).json({ error: 'Error al eliminar reporte.' });
+  }
+});
+
 app.post('/api/migrate', async (req, res) => {
   const { obras, personal, reportes } = req.body;
 
