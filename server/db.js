@@ -21,6 +21,17 @@ function buildServiceAccount() {
   };
 }
 
+function isRealServiceAccount(credentials) {
+  return Boolean(
+    credentials
+    && credentials.project_id
+    && credentials.client_email
+    && credentials.private_key
+    && credentials.private_key.includes('BEGIN PRIVATE KEY')
+    && !credentials.private_key.includes('TU_PRIVATE_KEY')
+  );
+}
+
 function normalizeId(value) {
   return value === undefined || value === null ? undefined : String(value);
 }
@@ -149,19 +160,30 @@ export async function getDb() {
 
   if (!admin.apps.length) {
     const credentials = buildServiceAccount();
+    const projectId = process.env.FIREBASE_PROJECT_ID || 'hexacall';
 
-    if (credentials) {
+    if (isRealServiceAccount(credentials)) {
       admin.initializeApp({
         credential: admin.credential.cert(credentials),
         projectId: credentials.project_id,
       });
+    } else if (process.env.FIREBASE_EMULATOR_HOST) {
+      admin.initializeApp({ projectId });
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID) {
-      admin.initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID });
+      admin.initializeApp({ projectId });
     } else {
-      throw new Error('No se encontró la configuración de Firebase. Define FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en tu archivo .env');
+      throw new Error('No se encontró la configuración de Firebase. Define FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en tu archivo .env o usa FIREBASE_EMULATOR_HOST.');
     }
   }
 
   firestoreDb = admin.firestore();
+
+  if (process.env.FIREBASE_EMULATOR_HOST) {
+    firestoreDb.settings({
+      host: process.env.FIREBASE_EMULATOR_HOST,
+      ssl: false,
+    });
+  }
+
   return createCollectionAdapter(firestoreDb);
 }

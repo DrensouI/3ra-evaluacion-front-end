@@ -68,6 +68,7 @@ http://localhost:3001
 - No necesitas crear manualmente las colecciones.
 - El backend creará automáticamente las colecciones `obras`, `empleados`, `reportes` y `usuarios` en Firestore.
 - Solo necesitas que el proyecto de Firebase esté bien configurado y que las variables de entorno sean correctas.
+- Si quieres probarlo localmente sin credenciales reales, puedes usar el emulador de Firestore y definir `FIREBASE_EMULATOR_HOST=localhost:8080`.
 
 
 
