@@ -4,6 +4,7 @@ import admin from 'firebase-admin';
 dotenv.config();
 
 let firestoreDb = null;
+const memoryCollections = new Map();
 
 function buildServiceAccount() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -61,6 +62,91 @@ function toPlainDocument(documento) {
   }
 
   return { ...documento.data(), id: documento.id };
+}
+
+function createMemoryDb() {
+  return {
+    collection(nombreColeccion) {
+      if (!memoryCollections.has(nombreColeccion)) {
+        memoryCollections.set(nombreColeccion, []);
+      }
+
+      const documentos = memoryCollections.get(nombreColeccion);
+
+      return {
+        async findOne(filtro = {}) {
+          return documentos.find(item => matchesFilter(item, filtro)) || null;
+        },
+
+        find() {
+          return {
+            async toArray() {
+              return [...documentos];
+            },
+          };
+        },
+
+        async deleteMany(filtro = {}) {
+          const filtrados = documentos.filter(item => matchesFilter(item, filtro));
+          if (filtrados.length === 0) {
+            return { deletedCount: 0 };
+          }
+
+          filtrados.forEach(item => {
+            const index = documentos.indexOf(item);
+            if (index >= 0) {
+              documentos.splice(index, 1);
+            }
+          });
+          return { deletedCount: filtrados.length };
+        },
+
+        async deleteOne(filtro = {}) {
+          const item = documentos.find(doc => matchesFilter(doc, filtro));
+          if (!item) {
+            return { deletedCount: 0 };
+          }
+
+          const index = documentos.indexOf(item);
+          documentos.splice(index, 1);
+          return { deletedCount: 1 };
+        },
+
+        async insertOne(item) {
+          const payload = { ...(item || {}) };
+          const docId = normalizeId(payload.id) || `mem-${Date.now()}-${documentos.length + 1}`;
+          const documento = { ...payload, id: docId };
+          documentos.push(documento);
+          return documento;
+        },
+
+        async insertMany(items = []) {
+          const documentosNuevos = [];
+          for (const item of items) {
+            const payload = { ...(item || {}) };
+            const docId = normalizeId(payload.id) || `mem-${Date.now()}-${documentos.length + 1}`;
+            const documento = { ...payload, id: docId };
+            documentos.push(documento);
+            documentosNuevos.push(documento);
+          }
+          return documentosNuevos;
+        },
+
+        async findOneAndUpdate(filtro = {}, actualizacion = {}) {
+          const item = documentos.find(doc => matchesFilter(doc, filtro));
+          if (!item) {
+            return { value: null };
+          }
+
+          const cambios = actualizacion.$set || actualizacion || {};
+          const actual = { ...item, ...cambios, id: item.id };
+          const index = documentos.indexOf(item);
+          documentos.splice(index, 1, actual);
+          return { value: actual };
+        },
+      };
+    },
+  };
 }
 
 function createCollectionAdapter(db) {
@@ -158,32 +244,33 @@ export async function getDb() {
     return createCollectionAdapter(firestoreDb);
   }
 
-  if (!admin.apps.length) {
-    const credentials = buildServiceAccount();
-    const projectId = process.env.FIREBASE_PROJECT_ID || 'hexacall';
+  const credentials = buildServiceAccount();
 
-    if (isRealServiceAccount(credentials)) {
+  if (isRealServiceAccount(credentials)) {
+    if (!admin.getApps().length) {
       admin.initializeApp({
         credential: admin.credential.cert(credentials),
         projectId: credentials.project_id,
       });
-    } else if (process.env.FIREBASE_EMULATOR_HOST) {
-      admin.initializeApp({ projectId });
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_PROJECT_ID) {
-      admin.initializeApp({ projectId });
-    } else {
-      throw new Error('No se encontró la configuración de Firebase. Define FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en tu archivo .env o usa FIREBASE_EMULATOR_HOST.');
+    }
+
+    try {
+      firestoreDb = admin.firestore();
+
+      if (process.env.FIREBASE_EMULATOR_HOST) {
+        firestoreDb.settings({
+          host: process.env.FIREBASE_EMULATOR_HOST,
+          ssl: false,
+        });
+      }
+
+      return createCollectionAdapter(firestoreDb);
+    } catch (error) {
+      console.warn('No se pudo conectar con Firestore, usando almacenamiento en memoria:', error.message);
+      return createMemoryDb();
     }
   }
 
-  firestoreDb = admin.firestore();
-
-  if (process.env.FIREBASE_EMULATOR_HOST) {
-    firestoreDb.settings({
-      host: process.env.FIREBASE_EMULATOR_HOST,
-      ssl: false,
-    });
-  }
-
-  return createCollectionAdapter(firestoreDb);
+  console.warn('No se detectaron credenciales reales de Firebase; usando almacenamiento en memoria para la demo.');
+  return createMemoryDb();
 }
