@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { MongoClient } from 'mongodb';
+import { getDb } from '../db.js';
 
 dotenv.config();
 
@@ -12,62 +12,31 @@ const ADMINISTRADORES = [
   },
 ];
 
-let clienteMongo = null;
-let baseDatos = null;
-
-async function conectarMongo() {
-  if (baseDatos) {
-    return baseDatos;
-  }
-
-  const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
-  const nombreBD = process.env.MONGODB_DB || process.env.MONGO_DB || 'hexacall';
-
-  if (!uri) {
-    throw new Error('No se encontró la URI de MongoDB. Define MONGODB_URI o MONGO_URI en tu archivo .env');
-  }
-
-  clienteMongo = new MongoClient(uri);
-  await clienteMongo.connect();
-  baseDatos = clienteMongo.db(nombreBD);
-
-  await seedAdministrador(baseDatos);
-  return baseDatos;
-}
-
 async function seedAdministrador(db) {
   const coleccion = db.collection('usuarios');
   const correoAdmin = ADMINISTRADORES[0].correo.toLowerCase();
 
-  const usuarioExistente = await coleccion.findOne({
-    correo: { $regex: new RegExp(`^${escaparRegex(correoAdmin)}$`, 'i') },
-  });
+  const usuarioExistente = await coleccion.findOne({ correo: correoAdmin });
 
   if (!usuarioExistente) {
     await coleccion.insertOne({
-      correo: ADMINISTRADORES[0].correo,
+      correo: correoAdmin,
       clave: ADMINISTRADORES[0].clave,
       nombre: ADMINISTRADORES[0].nombre,
       rol: ADMINISTRADORES[0].rol,
       creadoEn: new Date(),
     });
-    console.log('Usuario administrador inicial creado en MongoDB:', ADMINISTRADORES[0].correo);
+    console.log('Usuario administrador inicial creado en Firebase:', ADMINISTRADORES[0].correo);
   }
-}
-
-function escaparRegex(texto) {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export async function autenticarAdministrador(correo, clave) {
   const emailNormalizado = (correo || '').trim().toLowerCase();
 
   try {
-    const db = await conectarMongo();
-    const usuario = await db.collection('usuarios').findOne({
-      correo: { $regex: new RegExp(`^${escaparRegex(emailNormalizado)}$`, 'i') },
-      clave,
-    });
+    const db = await getDb();
+    await seedAdministrador(db);
+    const usuario = await db.collection('usuarios').findOne({ correo: emailNormalizado, clave });
 
     if (usuario) {
       return {
@@ -77,7 +46,7 @@ export async function autenticarAdministrador(correo, clave) {
       };
     }
   } catch (error) {
-    console.warn('No se pudo autenticar contra MongoDB:', error.message);
+    console.warn('No se pudo autenticar contra Firestore:', error.message);
   }
 
   const usuarioLocal = ADMINISTRADORES.find(

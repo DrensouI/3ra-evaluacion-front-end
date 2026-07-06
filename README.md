@@ -2,7 +2,7 @@
 
 Hexacall - Gestión de Obras, Personal y Reportes
 
-Proyecto para la evaluación que administra obras, personal y reportes diarios con autenticación segura en backend y persistencia en MongoDB.
+Proyecto para la evaluación que administra obras, personal y reportes diarios con autenticación segura en backend y persistencia en Firestore.
 
  Descripción
 Hexacall es un portal interno para digitalizar expedientes de obras, trabajadores y reportes diarios. Incluye login, dashboard, CRUD completo de obras, gestión de personal, reportes de obra y sincronización con MongoDB.
@@ -13,8 +13,8 @@ Hexacall es un portal interno para digitalizar expedientes de obras, trabajadore
 - CRUD de obras con estado, ubicación y presupuesto.
 - CRUD de personal con asignación a obras.
 - CRUD de reportes con fecha, descripción y validación.
-- Persistencia en MongoDB Atlas y respaldo local en `localStorage`.
-- Sincronización manual de datos entre local y MongoDB.
+- Persistencia en Firestore y respaldo local en `localStorage`.
+- Sincronización manual de datos entre local y Firestore.
 - Rutas protegidas para evitar accesos no autorizados.
 
  Estructura del proyecto
@@ -34,15 +34,16 @@ Hexacall es un portal interno para digitalizar expedientes de obras, trabajadore
 Requisitos
 - Node.js instalado.
 - npm instalado.
-- MongoDB Atlas o una instancia de MongoDB accesible.
+- Un proyecto de Firebase con Firestore habilitado.
 
 Paso a paso para instalar y ejecutar
 1. Abre una terminal en la carpeta del proyecto.
 2. Crea un archivo `.env` en la raíz con estas variables:
 
 env
-MONGO_URI="mongodb+srv://<usuario>:<contraseña>@<cluster>.mongodb.net"
-MONGO_DB="hexacall_db"
+FIREBASE_PROJECT_ID="hexacall"
+FIREBASE_CLIENT_EMAIL="tu-service-account@hexacall.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nTU_PRIVATE_KEY\n-----END PRIVATE KEY-----\n"
 VITE_API_BASE="http://localhost:4000/api"
 JWT_SECRET="una_clave_muy_segura"
 JWT_EXPIRES_IN="1h"
@@ -63,10 +64,10 @@ npm run dev
 http://localhost:3001
 
 
- Nota sobre MongoDB
+ Nota sobre Firestore
 - No necesitas crear manualmente las colecciones.
-- El backend creará automáticamente las colecciones `obras`, `empleados`, `reportes` y `usuarios`.
-- Solo necesitas que la URI de MongoDB sea correcta y que la base de datos esté accesible.
+- El backend creará automáticamente las colecciones `obras`, `empleados`, `reportes` y `usuarios` en Firestore.
+- Solo necesitas que el proyecto de Firebase esté bien configurado y que las variables de entorno sean correctas.
 
 
 
@@ -93,7 +94,7 @@ Se agregaron validaciones en el servidor para:
 2. Navega a «Obras» para crear, editar y eliminar proyectos.
 3. Navega a «Empleados» para agregar personal y asignarlos a obras.
 4. Navega a «Reportes» para registrar avances diarios.
-5. Verifica que los datos se guarden en MongoDB.
+5. Verifica que los datos se guarden en Firestore.
 6. Confirma que el backend responde 401 si el token es inválido.
 
 
