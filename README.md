@@ -1,4 +1,4 @@
-﻿# HEXACALL - Portal de Acceso Interno
+# HEXACALL - Portal de Acceso Interno
 
 Frontend en React + Vite con autenticación y datos en Firestore.
 
@@ -16,15 +16,7 @@ Frontend en React + Vite con autenticación y datos en Firestore.
    npm install
    ```
 
-2. **Crea `.env`** en la raíz (usa `.env.example` como plantilla):
-   ```env
-   VITE_FIREBASE_API_KEY=tu_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=tu_project.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=tu_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=tu_project.appspot.com
-   VITE_FIREBASE_MESSAGING_SENDER_ID=tu_messaging_sender_id
-   VITE_FIREBASE_APP_ID=tu_app_id
-   ```
+2. **Configura Firebase** (ver sección abajo)
 
 3. **Inicia el servidor**:
    ```bash
@@ -32,6 +24,75 @@ Frontend en React + Vite con autenticación y datos en Firestore.
    ```
 
 4. **Abre** `http://localhost:3001` en el navegador
+
+## Configuración de Firebase
+
+### Paso 1: Obtén tus credenciales de Firebase
+
+1. Ve a [Firebase Console](https://console.firebase.google.com)
+2. Selecciona tu proyecto
+3. Haz clic en ⚙️ **Configuración del proyecto**
+4. Vaya a la pestaña **"Tus aplicaciones"** → selecciona la app web
+5. Copia la información en **"Firebase SDK snippet"**:
+
+```javascript
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+```
+
+### Paso 2: Crea el archivo `.env`
+
+Copia el archivo `.env.example` y renómbralo a `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Luego reemplaza los valores de `firebaseConfig` en `.env`:
+
+| Variable | Dónde obtenerla |
+|----------|-----------------|
+| `VITE_FIREBASE_API_KEY` | `apiKey` del SDK |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `authDomain` del SDK |
+| `VITE_FIREBASE_PROJECT_ID` | `projectId` del SDK |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `storageBucket` del SDK |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` del SDK |
+| `VITE_FIREBASE_APP_ID` | `appId` del SDK |
+
+**Ejemplo**:
+```env
+VITE_FIREBASE_API_KEY=AIzaSyDXs0hK1yM2nOpQrS3tUvWxYz...
+VITE_FIREBASE_AUTH_DOMAIN=myproject.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=myproject
+VITE_FIREBASE_STORAGE_BUCKET=myproject.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abcd1234ef56...
+```
+
+⚠️ **IMPORTANTE**: El archivo `.env` está en `.gitignore` y **NO se sube al repositorio** (contiene credenciales reales)
+
+### Paso 3: Crea un usuario de prueba en Firebase Auth
+
+1. En Firebase Console → **Authentication** → **Users**
+2. Haz clic en **"+ Create user"**
+3. Ingresa:
+   - Email: `admin@admin.com`
+   - Password: `123456`
+4. Haz clic en **"Create"**
+
+### Paso 4: Configura Firestore Security Rules
+
+1. En Firebase Console → **Firestore Database** → **Rules**
+2. Reemplaza el contenido con las reglas de [FIRESTORE_RULES.md](./FIRESTORE_RULES.md)
+3. Haz clic en **"Publish"**
+
+Sin estas reglas, tu Firestore estará **expuesto públicamente**.
 
 ## Credenciales de prueba
 
@@ -44,17 +105,7 @@ Frontend en React + Vite con autenticación y datos en Firestore.
 - Al login, debe mostrar "**Firestore activo**" en el dashboard
 - Los datos se guardan en Firestore (obras, personal, reportes)
 
-## Seguridad - Firestore Rules
-
-**IMPORTANTE**: Debes configurar las reglas de seguridad en Firestore:
-
-1. Ve a **Firebase Console** → **Firestore** → **Rules**
-2. Copia las reglas de [FIRESTORE_RULES.md](./FIRESTORE_RULES.md)
-3. Publica las reglas
-
-Sin esto, tu Firestore estará **expuesto públicamente**.
-
-## Estructura de carpetas
+## Estructura del proyecto
 
 ```
 src/
@@ -64,14 +115,11 @@ src/
 └── utils.ts        # Storage helpers
 ```
 
-## Nota
+## Notas importantes para el docente
 
-Este es un **frontend puro** que usa Firebase:
-- ✅ Autenticación con Firebase Auth
-- ✅ Datos en Firestore
-- ❌ No requiere backend Express
+- ✅ **`.env`**: Ignorado por Git (contiene credenciales reales)
+- ✅ **`.env.example`**: En el repositorio como plantilla sin datos sensibles
+- ✅ **`FIRESTORE_RULES.md`**: Reglas de seguridad para Firestore
+- ✅ **Firebase Auth + Firestore**: Todo en el cliente, sin backend Express requerido
 
-Si necesitas el backend (Express + Admin SDK) para otras funcionalidades, contacta al administrador.
-
-
-El equipo de la universidad solo necesita CMD y Node.js. No es necesario instalar Java. Si ya tienes Node.js y npm, solo corre `npm install`, `npm run server` y `npm run dev`.
+Para la universidad: Solo necesitas **Node.js** + **npm**. No se necesita Java ni un servidor backend.
