@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SesionUsuario } from '../types';
 import { authStateObserver, loginFirebase, logoutFirebase } from '../services/firestore';
+import { loginAdmin } from '../services/auth';
 
 // Estructura del contexto
 interface AuthContextType {
@@ -60,7 +61,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return true;
     } catch (error) {
-      console.error('Error en login Firebase:', error);
+      console.warn('Error en login Firebase:', error);
+      // Fallback local/backend admin login for admin@admin.com
+      if (correoNormalizado === 'admin@admin.com') {
+        try {
+          const usuarioAdmin = await loginAdmin(correoNormalizado, claveIngresada);
+          setUsuario({
+            correo: usuarioAdmin.usuario.correo,
+            nombre: usuarioAdmin.usuario.nombre,
+            rol: usuarioAdmin.usuario.rol,
+          });
+          return true;
+        } catch (fallbackError) {
+          console.warn('Fallback login admin failed:', fallbackError);
+        }
+      }
       setErrorLogin('Credenciales incorrectas o error de autenticación.');
       return false;
     }
