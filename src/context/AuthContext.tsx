@@ -98,16 +98,3 @@ export function useAuth() {
   if (!context) throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
   return context;
 }
-    </AuthContext.Provider>
-  );
-}
-
-// Hook personalizado para acceder al contexto desde cualquier componente
-export function useAuth() {
-  // Obtiene el contexto
-  const context = useContext(AuthContext);
-  // Si no está dentro de un AuthProvider, lanza error
-  if (!context) throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');
-  // Devuelve el contexto para que el componente pueda usarlo
-  return context;
-}
