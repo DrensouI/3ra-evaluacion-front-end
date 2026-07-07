@@ -10,81 +10,73 @@ import { Almacenamiento } from './utils';
 import { Obra, Personal, Reporte } from './types';
 import SideBar from './componentes/sidebar';
 import Empleados from './componentes/Personal';
-import {
-  obtenerObras as obtenerObrasAPI,
-  obtenerPersonal as obtenerPersonalAPI,
-  obtenerReportes as obtenerReportesAPI,
-  guardarObras as guardarObrasAPI,
-  guardarPersonal as guardarPersonalAPI,
-  guardarReportes as guardarReportesAPI,
-  migrarDatos as migrarDatosAPI,
-  crearObra as crearObraAPI,
-  actualizarObra as actualizarObraAPI,
-  eliminarObra as eliminarObraAPI,
-  crearPersonal as crearPersonalAPI,
-  actualizarPersonal as actualizarPersonalAPI,
-  eliminarPersonalById as eliminarPersonalAPI,
-  crearReporte as crearReporteAPI,
-  actualizarReporte as actualizarReporteAPI,
-  eliminarReporteById as eliminarReporteAPI,
-} from './services/api';
+import * as FirestoreService from './services/firestore';
 
 // Componente Guardián que intercepta los accesos no autorizados a la intranet
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { estaAutenticado } = useAuth();
+  const { estaAutenticado, cargando } = useAuth();
+  if (cargando) {
+    return <div style={{ padding: '3rem', textAlign: 'center' }}>Verificando sesión…</div>;
+  }
   if (!estaAutenticado) return <Navigate to="/" replace />;
   return children;
 }
 
 function App() {
+  const { estaAutenticado, cargando: cargandoAuth } = useAuth();
+
   // Estados de los listados generales (obras, personal, reportes) cargados desde localStorage
   const [obras, setObras] = useState<Obra[]>(Almacenamiento.obtenerObras());
   const [personal, setPersonal] = useState<Personal[]>(Almacenamiento.obtenerPersonal());
   const [reportes, setReportes] = useState<Reporte[]>(Almacenamiento.obtenerReportes());
   const [cargandoInicial, setCargandoInicial] = useState(true);
-  const [origenDatos, setOrigenDatos] = useState<'api' | 'local' | 'error'>('local');
+  const [origenDatos, setOrigenDatos] = useState<'firestore' | 'local' | 'error'>('local');
   const [mensajeSync, setMensajeSync] = useState<string | null>(null);
 
   useEffect(() => {
-    const cargarDesdeAPI = async () => {
+    if (cargandoAuth) {
+      return;
+    }
+
+    const cargarDesdeFirestore = async () => {
+      if (!estaAutenticado) {
+        setCargandoInicial(false);
+        return;
+      }
+
       try {
-        const [obrasApi, personalApi, reportesApi] = await Promise.all([
-          obtenerObrasAPI(),
-          obtenerPersonalAPI(),
-          obtenerReportesAPI(),
+        const [obrasRemotas, personalRemoto, reportesRemotos] = await Promise.all([
+          FirestoreService.obtenerObras(),
+          FirestoreService.obtenerPersonal(),
+          FirestoreService.obtenerReportes(),
         ]);
 
-        const datosRemotosDisponibles = obrasApi.length || personalApi.length || reportesApi.length;
-        if (datosRemotosDisponibles) {
-          setObras(obrasApi);
-          setPersonal(personalApi);
-          setReportes(reportesApi);
-          Almacenamiento.guardarObras(obrasApi);
-          Almacenamiento.guardarPersonal(personalApi);
-          Almacenamiento.guardarReportes(reportesApi);
-          setOrigenDatos('api');
-        } else {
-          setOrigenDatos('local');
-        }
+        setObras(obrasRemotas);
+        setPersonal(personalRemoto);
+        setReportes(reportesRemotos);
+        Almacenamiento.guardarObras(obrasRemotas);
+        Almacenamiento.guardarPersonal(personalRemoto);
+        Almacenamiento.guardarReportes(reportesRemotos);
+        setOrigenDatos('firestore');
       } catch (error) {
-        console.warn('No se pudo conectar con la API, usando localStorage:', error);
+        console.warn('No se pudo conectar con Firestore, usando localStorage:', error);
         setOrigenDatos('local');
       } finally {
         setCargandoInicial(false);
       }
     };
 
-    cargarDesdeAPI();
-  }, []);
+    cargarDesdeFirestore();
+  }, [estaAutenticado, cargandoAuth]);
 
   const guardarObras = async (items: Obra[]) => {
     Almacenamiento.guardarObras(items);
     setObras(items);
     try {
-      await guardarObrasAPI(items);
-      setOrigenDatos('api');
+      await FirestoreService.guardarObras(items);
+      setOrigenDatos('firestore');
     } catch (error) {
-      console.error('No se pudo guardar obras en MongoDB:', error);
+      console.error('No se pudo guardar obras en Firestore:', error);
       setOrigenDatos('error');
     }
   };
@@ -92,11 +84,11 @@ function App() {
   // CRUD por documento - Obras
   const crearObra = async (obra: Obra) => {
     try {
-      await crearObraAPI(obra);
-      const obrasApi = await obtenerObrasAPI();
-      setObras(obrasApi);
-      Almacenamiento.guardarObras(obrasApi);
-      setOrigenDatos('api');
+      await FirestoreService.crearObra(obra);
+      const obrasRemotas = await FirestoreService.obtenerObras();
+      setObras(obrasRemotas);
+      Almacenamiento.guardarObras(obrasRemotas);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Crear obra falló, guardando localmente', err);
       const actual = [obra, ...obras];
@@ -108,11 +100,11 @@ function App() {
 
   const actualizarObra = async (id: string, cambios: Partial<Obra>) => {
     try {
-      await actualizarObraAPI(id, cambios);
-      const obrasApi = await obtenerObrasAPI();
-      setObras(obrasApi);
-      Almacenamiento.guardarObras(obrasApi);
-      setOrigenDatos('api');
+      await FirestoreService.actualizarObra(id, cambios);
+      const obrasRemotas = await FirestoreService.obtenerObras();
+      setObras(obrasRemotas);
+      Almacenamiento.guardarObras(obrasRemotas);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Actualizar obra falló, actualizando localmente', err);
       const actual = obras.map(o => (o.id === id ? { ...o, ...cambios } : o));
@@ -124,11 +116,11 @@ function App() {
 
   const eliminarObra = async (id: string) => {
     try {
-      await eliminarObraAPI(id);
-      const obrasApi = await obtenerObrasAPI();
-      setObras(obrasApi);
-      Almacenamiento.guardarObras(obrasApi);
-      setOrigenDatos('api');
+      await FirestoreService.eliminarObra(id);
+      const obrasRemotas = await FirestoreService.obtenerObras();
+      setObras(obrasRemotas);
+      Almacenamiento.guardarObras(obrasRemotas);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Eliminar obra falló, eliminando localmente', err);
       const actual = obras.filter(o => o.id !== id);
@@ -142,10 +134,10 @@ function App() {
     Almacenamiento.guardarPersonal(items);
     setPersonal(items);
     try {
-      await guardarPersonalAPI(items);
-      setOrigenDatos('api');
+      await FirestoreService.guardarPersonal(items);
+      setOrigenDatos('firestore');
     } catch (error) {
-      console.error('No se pudo guardar personal en MongoDB:', error);
+      console.error('No se pudo guardar personal en Firestore:', error);
       setOrigenDatos('error');
     }
   };
@@ -153,11 +145,11 @@ function App() {
   // CRUD por documento - Personal
   const crearPersonal = async (p: Personal) => {
     try {
-      await crearPersonalAPI(p);
-      const personalApi = await obtenerPersonalAPI();
-      setPersonal(personalApi);
-      Almacenamiento.guardarPersonal(personalApi);
-      setOrigenDatos('api');
+      await FirestoreService.crearPersonal(p);
+      const personalRemoto = await FirestoreService.obtenerPersonal();
+      setPersonal(personalRemoto);
+      Almacenamiento.guardarPersonal(personalRemoto);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Crear personal falló, guardando localmente', err);
       const actual = [p, ...personal];
@@ -169,11 +161,11 @@ function App() {
 
   const actualizarPersonal = async (id: string, cambios: Partial<Personal>) => {
     try {
-      await actualizarPersonalAPI(id, cambios);
-      const personalApi = await obtenerPersonalAPI();
-      setPersonal(personalApi);
-      Almacenamiento.guardarPersonal(personalApi);
-      setOrigenDatos('api');
+      await FirestoreService.actualizarPersonal(id, cambios);
+      const personalRemoto = await FirestoreService.obtenerPersonal();
+      setPersonal(personalRemoto);
+      Almacenamiento.guardarPersonal(personalRemoto);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Actualizar personal falló, actualizando localmente', err);
       const actual = personal.map(p => (p.id === id ? { ...p, ...cambios } : p));
@@ -185,11 +177,11 @@ function App() {
 
   const eliminarPersonal = async (id: string) => {
     try {
-      await eliminarPersonalAPI(id);
-      const personalApi = await obtenerPersonalAPI();
-      setPersonal(personalApi);
-      Almacenamiento.guardarPersonal(personalApi);
-      setOrigenDatos('api');
+      await FirestoreService.eliminarPersonal(id);
+      const personalRemoto = await FirestoreService.obtenerPersonal();
+      setPersonal(personalRemoto);
+      Almacenamiento.guardarPersonal(personalRemoto);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Eliminar personal falló, eliminando localmente', err);
       const actual = personal.filter(p => p.id !== id);
@@ -203,10 +195,10 @@ function App() {
     Almacenamiento.guardarReportes(items);
     setReportes(items);
     try {
-      await guardarReportesAPI(items);
-      setOrigenDatos('api');
+      await FirestoreService.guardarReportes(items);
+      setOrigenDatos('firestore');
     } catch (error) {
-      console.error('No se pudo guardar reportes en MongoDB:', error);
+      console.error('No se pudo guardar reportes en Firestore:', error);
       setOrigenDatos('error');
     }
   };
@@ -214,11 +206,11 @@ function App() {
   // CRUD por documento - Reportes
   const crearReporte = async (r: Reporte) => {
     try {
-      await crearReporteAPI(r);
-      const reportesApi = await obtenerReportesAPI();
-      setReportes(reportesApi);
-      Almacenamiento.guardarReportes(reportesApi);
-      setOrigenDatos('api');
+      await FirestoreService.crearReporte(r);
+      const reportesRemotos = await FirestoreService.obtenerReportes();
+      setReportes(reportesRemotos);
+      Almacenamiento.guardarReportes(reportesRemotos);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Crear reporte falló, guardando localmente', err);
       const actual = [r, ...reportes];
@@ -230,11 +222,11 @@ function App() {
 
   const actualizarReporte = async (id: string, cambios: Partial<Reporte>) => {
     try {
-      await actualizarReporteAPI(id, cambios);
-      const reportesApi = await obtenerReportesAPI();
-      setReportes(reportesApi);
-      Almacenamiento.guardarReportes(reportesApi);
-      setOrigenDatos('api');
+      await FirestoreService.actualizarReporte(id, cambios);
+      const reportesRemotos = await FirestoreService.obtenerReportes();
+      setReportes(reportesRemotos);
+      Almacenamiento.guardarReportes(reportesRemotos);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Actualizar reporte falló, actualizando localmente', err);
       const actual = reportes.map(r => (r.id === id ? { ...r, ...cambios } : r));
@@ -246,11 +238,11 @@ function App() {
 
   const eliminarReporte = async (id: string) => {
     try {
-      await eliminarReporteAPI(id);
-      const reportesApi = await obtenerReportesAPI();
-      setReportes(reportesApi);
-      Almacenamiento.guardarReportes(reportesApi);
-      setOrigenDatos('api');
+      await FirestoreService.eliminarReporte(id);
+      const reportesRemotos = await FirestoreService.obtenerReportes();
+      setReportes(reportesRemotos);
+      Almacenamiento.guardarReportes(reportesRemotos);
+      setOrigenDatos('firestore');
     } catch (err) {
       console.error('Eliminar reporte falló, eliminando localmente', err);
       const actual = reportes.filter(r => r.id !== id);
@@ -260,16 +252,16 @@ function App() {
     }
   };
 
-  const sincronizarConMongo = async () => {
+  const sincronizarConFirestore = async () => {
     try {
-      await migrarDatosAPI({ obras, personal, reportes });
-      setOrigenDatos('api');
-      setMensajeSync('Migración a MongoDB completada con éxito.');
+      await FirestoreService.migrarDatos({ obras, personal, reportes });
+      setOrigenDatos('firestore');
+      setMensajeSync('Migración a Firestore completada con éxito.');
       window.setTimeout(() => setMensajeSync(null), 4000);
     } catch (error) {
-      console.error('Error al migrar datos a MongoDB:', error);
+      console.error('Error al migrar datos a Firestore:', error);
       setOrigenDatos('error');
-      setMensajeSync('No se pudo sincronizar con MongoDB. Revisa la conexión del servidor.');
+      setMensajeSync('No se pudo sincronizar con Firestore. Revisa la conexión.');
     }
   };
 
@@ -305,7 +297,7 @@ function App() {
             logout={cerrarSesion}
             usuario={usuario}
             origenDatos={origenDatos}
-            sincronizarDatos={sincronizarConMongo}
+            sincronizarDatos={sincronizarConFirestore}
             mensajeSync={mensajeSync}
           />
         </div>

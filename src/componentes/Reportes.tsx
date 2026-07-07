@@ -5,7 +5,7 @@ import './reportes.css';
 // Fecha actual en formato YYYY-MM-DD (usada para validación de fecha)
 const fechaHoy = new Date().toISOString().slice(0, 10);
 
-/* Persistencia: Los datos se guardan en MongoDB a través de los endpoints de la API */
+/* Persistencia: Los datos se guardan en Firestore directamente desde el cliente. */
 export default function Reportes({ obras, reportes, guardarReportes, crearReporte: crearReporteCtx, actualizarReporte: actualizarReporteCtx, eliminarReporte: eliminarReporteCtx }: ReportesProps) {
   // id del reporte que se está editando (null => creando uno nuevo)
   const [reporteEditandoId, setReporteEditandoId] = useState<string | null>(null);

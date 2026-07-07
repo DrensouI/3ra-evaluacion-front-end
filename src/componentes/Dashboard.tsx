@@ -73,7 +73,7 @@ export default function Dashboard({ obras, personal, reportes, alNavegarPestaña
   ];
 
   const abrirFirestore = () => {
-    window.open('https://console.firebase.google.com/project/frotend-6438c/firestore/data', '_blank');
+    window.open('https://console.firebase.google.com/', '_blank');
   };
 
   return (
@@ -92,9 +92,9 @@ export default function Dashboard({ obras, personal, reportes, alNavegarPestaña
                 <span className="user-chip-role">{usuario.rol}</span>
               </>
             )}
-            <span className={`dashboard-status-pill dashboard-status-pill--${origenDatos}`}>{origenDatos === 'api' ? 'MongoDB activo' : origenDatos === 'local' ? 'LocalStorage activo' : 'Sincronización fallida'}</span>
+            <span className={`dashboard-status-pill dashboard-status-pill--${origenDatos}`}>{origenDatos === 'firestore' ? 'Firestore activo' : origenDatos === 'local' ? 'LocalStorage activo' : 'Sincronización fallida'}</span>
           </div>
-          <button type="button" className="link-button" onClick={abrirFirestore}>Ver Firestore</button>
+          <button type="button" className="link-button" onClick={abrirFirestore}>Abrir Firebase</button>
           <button type="button" className="logout-button" onClick={logout}>Cerrar sesión</button>
         </div>
         {mensajeSync && <div className="dashboard-sync-message">{mensajeSync}</div>}

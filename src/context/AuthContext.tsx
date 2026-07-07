@@ -1,35 +1,41 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SesionUsuario } from '../types';
-import { loginAdmin, guardarToken, borrarToken } from '../services/auth';
-
-const CLAVE_SESION = 'hexacall_sesion';
+import { authStateObserver, loginFirebase, logoutFirebase } from '../services/firestore';
 
 interface AuthContextType {
   usuario: SesionUsuario | null;
   estaAutenticado: boolean;
+  cargando: boolean;
   login: (correo: string, clave: string) => Promise<boolean>;
   logout: () => void;
   errorLogin: string | null;
 }
 
-//  Se crea el contexto global para almacenar la sesión (createContext).
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const cargarSesionDesdeStorage = () => {
-  try {
-    return JSON.parse(localStorage.getItem(CLAVE_SESION) ?? 'null');
-  } catch {
-    localStorage.removeItem(CLAVE_SESION);
-    return null;
-  }
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Estado principal que intenta rescatar la sesión desde el almacenamiento del navegador (useState + localStorage).
-  const [usuario, setUsuario] = useState<SesionUsuario | null>(cargarSesionDesdeStorage);
+  const [usuario, setUsuario] = useState<SesionUsuario | null>(null);
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(true);
 
-  // Función login que intenta autenticar contra el endpoint backend y guarda la sesión en localStorage.
+  useEffect(() => {
+    const unsubscribe = authStateObserver(user => {
+      if (user) {
+        const correo = user.email || '';
+        setUsuario({
+          correo,
+          nombre: user.displayName || correo.split('@')[0] || 'Usuario',
+          rol: 'administrador',
+        });
+      } else {
+        setUsuario(null);
+      }
+      setCargando(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
   const login = async (correoIngresado: string, claveIngresada: string): Promise<boolean> => {
     setErrorLogin(null);
     const correoNormalizado = correoIngresado.trim().toLowerCase();
@@ -40,39 +46,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const respuesta = await loginAdmin(correoNormalizado, claveIngresada);
-      const datosSesionUsuario: SesionUsuario = {
-        correo: respuesta.usuario.correo,
-        nombre: respuesta.usuario.nombre,
-        rol: respuesta.usuario.rol,
-      };
-
-      guardarToken(respuesta.token);
-      localStorage.setItem(CLAVE_SESION, JSON.stringify(datosSesionUsuario));
-      setUsuario(datosSesionUsuario);
+      const usuarioFirebase = await loginFirebase(correoNormalizado, claveIngresada);
+      setUsuario({
+        correo: usuarioFirebase.email || correoNormalizado,
+        nombre: usuarioFirebase.displayName || correoNormalizado.split('@')[0],
+        rol: 'administrador',
+      });
       return true;
     } catch (error) {
-      console.error('Error en login:', error);
-      setErrorLogin('Credenciales incorrectas o error del servidor.');
+      console.error('Error en login Firebase:', error);
+      setErrorLogin('Credenciales incorrectas o error de autenticación.');
       return false;
     }
   };
 
-  // Función logout que remueve todo rastro de la sesión actual (Definición de logout).
-  const logout = () => {
-    localStorage.removeItem(CLAVE_SESION);
-    borrarToken();
+  const logout = async () => {
+    try {
+      await logoutFirebase();
+    } catch (error) {
+      console.warn('Error al cerrar sesión:', error);
+    }
     setUsuario(null);
     setErrorLogin(null);
   };
 
-  // Compartimos el estado 'usuario' y las funciones al resto de la app (AuthContext.Provider).
   return (
-    <AuthContext.Provider value={{ usuario, estaAutenticado: Boolean(usuario), login, logout, errorLogin }}>
+    <AuthContext.Provider value={{ usuario, estaAutenticado: Boolean(usuario), cargando, login, logout, errorLogin }}>
       {children}
     </AuthContext.Provider>
   );
 }
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth debe ser utilizado dentro de un AuthProvider');

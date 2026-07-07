@@ -36,7 +36,7 @@ export interface DashboardProps {
   alNavegarPestaña: (pestaña: string) => void;
   logout: () => void;
   usuario: SesionUsuario | null;
-  origenDatos: 'api' | 'local' | 'error';
+  origenDatos: 'firestore' | 'local' | 'error';
   sincronizarDatos: () => Promise<void>;
   mensajeSync: string | null;
 }
