@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-import admin from 'firebase-admin';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 dotenv.config();
 
@@ -247,15 +248,15 @@ export async function getDb() {
   const credentials = buildServiceAccount();
 
   if (isRealServiceAccount(credentials)) {
-    if (!admin.getApps().length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(credentials),
+    if (!getApps().length) {
+      initializeApp({
+        credential: cert(credentials),
         projectId: credentials.project_id,
       });
     }
 
     try {
-      firestoreDb = admin.firestore();
+      firestoreDb = getFirestore();
 
       if (process.env.FIREBASE_EMULATOR_HOST) {
         firestoreDb.settings({
